@@ -10,13 +10,13 @@ namespace elem
     struct UniformRandomNoiseNode : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "seed") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                seed = static_cast<uint32_t>((js::Number) val);
+                seed = static_cast<uint32_t>(std::get<Number>(val));
             }
 
             return GraphNode<FloatType>::setProperty(key, val);

@@ -26,13 +26,13 @@ namespace elem
             Bell = 2,
         };
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "mode") {
-                if (!val.isString())
+                if (!isString(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto const m = (js::String) val;
+                auto const m = std::get<String>(val);
 
                 if (m == "lowshelf")     { _mode.store(Mode::Lowshelf); }
                 if (m == "highshelf")    { _mode.store(Mode::Highshelf); }

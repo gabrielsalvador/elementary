@@ -35,37 +35,37 @@ namespace elem
     struct Seq2Node : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "hold") {
-                if (!val.isBool())
+                if (!isBool(val))
                     return ReturnCode::InvalidPropertyType();
 
-                wantsHold.store((js::Boolean) val);
+                wantsHold.store(std::get<Boolean>(val));
             }
 
             if (key == "loop") {
-                if (!val.isBool())
+                if (!isBool(val))
                     return ReturnCode::InvalidPropertyType();
 
-                wantsLoop.store((js::Boolean) val);
+                wantsLoop.store(std::get<Boolean>(val));
             }
 
             if (key == "offset") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                if ((js::Number) val < 0.0)
+                if (std::get<Number>(val) < 0.0)
                     return ReturnCode::InvalidPropertyValue();
 
-                seqOffset.store(static_cast<size_t>((js::Number) val));
+                seqOffset.store(static_cast<size_t>(std::get<Number>(val)));
             }
 
             if (key == "seq") {
-                if (!val.isArray())
+                if (!isArray(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto& seq = val.getArray();
+                auto& seq = getArray(val);
                 auto data = sequencePool.allocate();
 
                 // The data array that we get from the pool may have been
@@ -74,7 +74,7 @@ namespace elem
                 data->resize(seq.size());
 
                 for (size_t i = 0; i < seq.size(); ++i)
-                    data->at(i) = FloatType((js::Number) seq[i]);
+                    data->at(i) = FloatType(std::get<Number>(seq[i]));
 
                 // Finally, we push our new sequence data into the event
                 // queue for the realtime thread.

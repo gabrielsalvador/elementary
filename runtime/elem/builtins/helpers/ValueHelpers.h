@@ -10,15 +10,15 @@ namespace ValueHelpers
 
     // Name says it all
     //
-    // Just a utility for converting a js::Array to a std::vector<float>
+    // Just a utility for converting a Array to a std::vector<float>
     template <typename FloatType>
-    std::vector<FloatType> arrayToFloatVector (js::Array const& ar)
+    std::vector<FloatType> arrayToFloatVector (Array const& ar)
     {
         try {
             std::vector<FloatType> ret (ar.size());
 
             for (size_t i = 0; i < ar.size(); ++i) {
-                ret[i] = static_cast<FloatType>((js::Number) ar[i]);
+                ret[i] = static_cast<FloatType>(std::get<Number>(ar)[i]);
             }
 
             return ret;
@@ -29,13 +29,13 @@ namespace ValueHelpers
 
     // Same thing as above, but with in-place mutation
     template <typename FloatType>
-    void arrayToFloatVector (std::vector<FloatType>& target, js::Array const& ar)
+    void arrayToFloatVector (std::vector<FloatType>& target, Array const& ar)
     {
         try {
             target.resize(ar.size());
 
             for (size_t i = 0; i < ar.size(); ++i) {
-                target[i] = static_cast<FloatType>((js::Number) ar[i]);
+                target[i] = static_cast<FloatType>(std::get<Number>(ar)[i]);
             }
         } catch (std::exception const& e) {
             throw InvariantViolation("Failed to convert Array to float vector; invalid array child!");

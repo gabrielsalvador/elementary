@@ -47,21 +47,21 @@ namespace elem
         //
         // Thread safety must be managed by the user. This method will be called on
         // a non-realtime thread.
-        virtual int setProperty(std::string const& key, js::Value const& val);
-        virtual int setProperty(std::string const& key, js::Value const& val, SharedResourceMap& resources);
+        virtual int setProperty(std::string const& key, Value const& val);
+        virtual int setProperty(std::string const& key, Value const& val, SharedResourceMap& resources);
 
         // Retreives a property from the Node's props, falling back to the provided
         // default value if no property exists by the given name.
         //
-        // Properties are held in a map<std::string, js::Value>, but the ValueType template
-        // allows fetching a property by a given subtype such as js::Number. If an entry is
+        // Properties are held in a map<std::string, Value>, but the ValueType template
+        // allows fetching a property by a given subtype such as Number. If an entry is
         // found in the props map, its value will be returned by casting to ValueType, therefore
         // if the cast fails, this method will throw.
         template <typename ValueType>
         ValueType getPropertyWithDefault(std::string const& key, ValueType const& df);
 
         // Returns a copy of the entire property object in its current state
-        js::Object getProperties();
+        Object getProperties();
 
         // Process the next block of audio data.
         //
@@ -78,7 +78,7 @@ namespace elem
         // event handler callback provided.
         //
         // Thread safety must be managed by the user.
-        virtual void processEvents(std::function<void(std::string const&, js::Value)>& /* eventHandler */) {}
+        virtual void processEvents(std::function<void(std::string const&, Value)>& /* eventHandler */) {}
 
         // Derived classes may override this method to reset themselves.
         //
@@ -89,7 +89,7 @@ namespace elem
     private:
         //==============================================================================
         NodeId nodeId;
-        std::unordered_map<std::string, js::Value> props;
+        std::unordered_map<std::string, Value> props;
 
         double sampleRate;
         size_t blockSize;
@@ -106,29 +106,32 @@ namespace elem
     }
 
     template <typename FloatType>
-    int GraphNode<FloatType>::setProperty(std::string const& key, js::Value const& val) {
+    int GraphNode<FloatType>::setProperty(std::string const& key, Value const& val) {
         props.insert_or_assign(key, val);
         return ReturnCode::Ok();
     }
 
     template <typename FloatType>
-    int GraphNode<FloatType>::setProperty(std::string const& key, js::Value const& val, SharedResourceMap&) {
+    int GraphNode<FloatType>::setProperty(std::string const& key, Value const& val, SharedResourceMap&) {
         return setProperty(key, val);
     }
 
     template <typename FloatType>
     template <typename ValueType>
     ValueType GraphNode<FloatType>::getPropertyWithDefault(std::string const& key, ValueType const& df) {
-        if (props.count(key) > 0) {
-            return static_cast<ValueType>(props.at(key));
+        auto it = props.find(key);
+        if (it == props.end()) return df;
+        if constexpr (std::is_same_v<ValueType, Value>) {
+            return it->second;
+        } else {
+            if (!std::holds_alternative<ValueType>(it->second)) return df;
+            return std::get<ValueType>(it->second);
         }
-
-        return df;
     }
 
     template <typename FloatType>
-    js::Object GraphNode<FloatType>::getProperties() {
-        return js::Object(props.begin(), props.end());
+    Object GraphNode<FloatType>::getProperties() {
+        return Object(props.begin(), props.end());
     }
 
 } // namespace elem

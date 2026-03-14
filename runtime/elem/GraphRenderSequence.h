@@ -166,7 +166,7 @@ namespace elem
 
             // Gives the node a chance to prepare anything that might dynamically depend on
             // the number of input signals
-            node->setProperty("_internal:numChildren", elem::js::Number(numChildren));
+            node->setProperty("_internal:numChildren", elem::Number(numChildren));
 
             for (size_t j = 0; j < numChildren; ++j) {
                 auto const& inlet = inlets[j];
@@ -186,7 +186,7 @@ namespace elem
             });
         }
 
-        void processQueuedEvents(std::function<void(std::string const&, js::Value)>& evtCallback)
+        void processQueuedEvents(std::function<void(std::string const&, Value)>& evtCallback)
         {
             // We don't process events if our root is inactive
             if (rootPtr->getPropertyWithDefault("active", false))
@@ -258,7 +258,7 @@ namespace elem
             subseqs.push_back(std::move(sq));
         }
 
-        void processQueuedEvents(std::function<void(std::string const&, js::Value)>&& evtCallback)
+        void processQueuedEvents(std::function<void(std::string const&, Value)>&& evtCallback)
         {
             std::for_each(subseqs.begin(), subseqs.end(), [&](RootRenderSequence<FloatType>& sq) {
                 sq.processQueuedEvents(evtCallback);

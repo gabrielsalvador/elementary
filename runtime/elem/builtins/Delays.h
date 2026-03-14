@@ -53,16 +53,16 @@ namespace elem
         VariableDelayNode(NodeId id, FloatType const sr, int const blockSize)
             : GraphNode<FloatType>::GraphNode(id, sr, blockSize)
         {
-            (void) setProperty("size", js::Value((js::Number) blockSize));
+            (void) setProperty("size", Value(Number(blockSize)));
         }
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "size") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto const size = static_cast<int>((js::Number) val);
+                auto const size = static_cast<int>(std::get<Number>(val));
                 auto data = bufferPool.allocate();
 
                 // The buffer that we get from the pool may have been
@@ -180,13 +180,13 @@ namespace elem
             : GraphNode<FloatType>::GraphNode(id, sr, bs)
             , blockSize(bs)
         {
-            (void) setProperty("size", js::Value((js::Number) blockSize));
+            (void) setProperty("size", Value(Number(blockSize)));
         }
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "size") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
                 // Here we make sure that we allocate at least one block size
@@ -194,7 +194,7 @@ namespace elem
                 // pointer freely forward each block, never risking clobbering. Then
                 // we round up to the next power of two for bit masking tricks around
                 // the delay line length.
-                auto const len = static_cast<int>((js::Number) val);
+                auto const len = static_cast<int>(std::get<Number>(val));
                 auto const size = elem::bitceil(len + blockSize);
                 auto data = bufferPool.allocate();
 

@@ -8,8 +8,6 @@
 
 namespace elem
 {
-namespace js
-{
 
     //==============================================================================
     // Representations of primitive JavaScript values
@@ -22,7 +20,7 @@ namespace js
 
     //==============================================================================
     // Forward declare the Value to allow recursive type definitions
-    class Value;
+    struct Value;
 
     //==============================================================================
     // Representations of JavaScript Objects
@@ -32,179 +30,125 @@ namespace js
     using Function = std::function<Value(Array)>;
 
     //==============================================================================
-    // The Value class is a thin wrapper around a std::variant for dynamically representing
-    // values present in the underlying JavaScript runtime.
-    class Value {
-    public:
-        //==============================================================================
+    // Value is a std::variant representing any dynamically-typed JavaScript value.
+    struct Value : std::variant<Undefined, Null, Boolean, Number, String, Object, Array, Float32Array, Function>
+    {
+        using variant::variant;
+
         // Default constructor creates an undefined value
-        Value()
-           : var(Undefined()) {}
+        Value() : variant(Undefined{}) {}
 
-        // Destructor
-        ~Value() noexcept = default;
-
-        Value (Undefined v)             : var(v) {}
-        Value (Null v)                  : var(v) {}
-        Value (Boolean v)               : var(v) {}
-        Value (Number v)                : var(v) {}
-        Value (char const* v)           : var(String(v)) {}
-        Value (String const& v)         : var(v) {}
-        Value (Array const& v)          : var(v) {}
-        Value (Float32Array const& v)   : var(v) {}
-        Value (Object const& v)         : var(v) {}
-        Value (Function const& v)       : var(v) {}
-
-        Value (Value const& valueToCopy) : var(valueToCopy.var) {}
-        Value (Value && valueToMove) noexcept : var(std::move(valueToMove.var)) {}
-
-        //==============================================================================
-        // Assignment
-        Value& operator= (Value const& valueToCopy)
-        {
-            var = valueToCopy.var;
-            return *this;
-        }
-
-        Value& operator= (Value && valueToMove) noexcept
-        {
-            var = std::move(valueToMove.var);
-            return *this;
-        }
-
-        //==============================================================================
-        // Type checks
-        bool isUndefined()      const { return std::holds_alternative<Undefined>(var); }
-        bool isNull()           const { return std::holds_alternative<Null>(var); }
-        bool isBool()           const { return std::holds_alternative<Boolean>(var); }
-        bool isNumber()         const { return std::holds_alternative<Number>(var); }
-        bool isString()         const { return std::holds_alternative<String>(var); }
-        bool isArray()          const { return std::holds_alternative<Array>(var); }
-        bool isFloat32Array()   const { return std::holds_alternative<Float32Array>(var); }
-        bool isObject()         const { return std::holds_alternative<Object>(var); }
-        bool isFunction()       const { return std::holds_alternative<Function>(var); }
-
-        //==============================================================================
-        // Primitive value casts
-        operator Boolean()  const { return std::get<Boolean>(var); }
-        operator Number()   const { return std::get<Number>(var); }
-        operator String()   const { return std::get<String>(var); }
-        operator Array()    const { return std::get<Array>(var); }
-
-        // Object value getters
-        Array const& getArray()                 const { return std::get<Array>(var); }
-        Float32Array const& getFloat32Array()   const { return std::get<Float32Array>(var); }
-        Object const& getObject()               const { return std::get<Object>(var); }
-        Function const& getFunction()           const { return std::get<Function>(var); }
-
-        Array& getArray()                   { return std::get<Array>(var); }
-        Float32Array& getFloat32Array()     { return std::get<Float32Array>(var); }
-        Object& getObject()                 { return std::get<Object>(var); }
-        Function& getFunction()             { return std::get<Function>(var); }
-
-        //==============================================================================
-        // Object property access with a default return value
-        template <typename T>
-        T getWithDefault(std::string const& k, T const& v) const
-        {
-            auto o = getObject();
-
-            if (o.count(k) > 0) {
-                return T(o.at(k));
-            }
-
-            return v;
-        }
-
-        // String representation
-        String toString() const
-        {
-            if (isUndefined()) { return "undefined"; }
-            if (isNull()) { return "null"; }
-            if (isBool()) { return String(std::to_string(std::get<Boolean>(var))); }
-            if (isNumber()) { return String(std::to_string(std::get<Number>(var))); }
-            if (isString()) { return std::get<String>(var); }
-            if (isArray())
-            {
-                auto& a = getArray();
-                std::stringstream ss;
-                ss << "[";
-
-                for (size_t i = 0; i < std::min((size_t) 3, a.size()); ++i)
-                    ss << a[i].toString() << ", ";
-
-                if (a.size() > 3)
-                {
-                    ss << "...]";
-                    return ss.str();
-                }
-
-                auto s = ss.str();
-                return s.substr(0, s.size() - 2) + "]";
-            }
-            if (isFloat32Array())
-            {
-                auto& fa = getFloat32Array();
-                std::stringstream ss;
-                ss << "[";
-
-                for (size_t i = 0; i < std::min((size_t) 3, fa.size()); ++i)
-                    ss << std::to_string(fa[i]) << ", ";
-
-                if (fa.size() > 3)
-                {
-                    ss << "...]";
-                    return ss.str();
-                }
-
-                auto s = ss.str();
-                return s.substr(0, s.size() - 2) + "]";
-            }
-            if (isObject())
-            {
-                std::stringstream ss;
-                ss << "{\n";
-
-                for (auto const& [k, v] : getObject()) {
-                    ss << "    " << k << ": " << v.toString() << "\n";
-                }
-
-                ss << "}\n";
-                return ss.str();
-            }
-
-            // TODO
-            if (isFunction()) { return "[Object Function]"; }
-
-            return "undefined";
-        }
-
-    private:
-        //==============================================================================
-        // Internally we represent the Value's real value with a variant
-        using VarType = std::variant<
-            Undefined,
-            Null,
-            Boolean,
-            Number,
-            String,
-            Object,
-            Array,
-            Float32Array,
-            Function>;
-
-        VarType var;
+        // Allow construction from const char* as String
+        Value(char const* v) : variant(String(v)) {}
     };
 
     // We need moves to avoid allocations on the realtime thread if moving from
     // a lock free queue.
     static_assert(std::is_move_assignable<Value>::value);
 
+    //==============================================================================
+    // Type checks
+    inline bool isUndefined(Value const& v)    { return std::holds_alternative<Undefined>(v); }
+    inline bool isNull(Value const& v)         { return std::holds_alternative<Null>(v); }
+    inline bool isBool(Value const& v)         { return std::holds_alternative<Boolean>(v); }
+    inline bool isNumber(Value const& v)       { return std::holds_alternative<Number>(v); }
+    inline bool isString(Value const& v)       { return std::holds_alternative<String>(v); }
+    inline bool isArray(Value const& v)        { return std::holds_alternative<Array>(v); }
+    inline bool isFloat32Array(Value const& v) { return std::holds_alternative<Float32Array>(v); }
+    inline bool isObject(Value const& v)       { return std::holds_alternative<Object>(v); }
+    inline bool isFunction(Value const& v)     { return std::holds_alternative<Function>(v); }
+
+    //==============================================================================
+    // Getters
+    inline Array const&        getArray(Value const& v)        { return std::get<Array>(v); }
+    inline Array&              getArray(Value& v)              { return std::get<Array>(v); }
+    inline Float32Array const& getFloat32Array(Value const& v) { return std::get<Float32Array>(v); }
+    inline Float32Array&       getFloat32Array(Value& v)       { return std::get<Float32Array>(v); }
+    inline Object const&       getObject(Value const& v)       { return std::get<Object>(v); }
+    inline Object&             getObject(Value& v)             { return std::get<Object>(v); }
+    inline Function const&     getFunction(Value const& v)     { return std::get<Function>(v); }
+    inline Function&           getFunction(Value& v)           { return std::get<Function>(v); }
+
+    //==============================================================================
+    // Object property access with a default return value
+    template <typename T>
+    inline T getWithDefault(Value const& v, std::string const& k, T const& def) {
+        auto const& o = std::get<Object>(v);
+        auto it = o.find(k);
+        if (it != o.end()) return T(it->second);
+        return def;
+    }
+
+    //==============================================================================
+    // String representation (forward-declared; defined after all types are complete)
+    inline String toString(Value const& v);
+
+    inline String toString(Value const& v)
+    {
+        if (isUndefined(v)) { return "undefined"; }
+        if (isNull(v)) { return "null"; }
+        if (isBool(v)) { return String(std::to_string(std::get<Boolean>(v))); }
+        if (isNumber(v)) { return String(std::to_string(std::get<Number>(v))); }
+        if (isString(v)) { return std::get<String>(v); }
+        if (isArray(v))
+        {
+            auto& a = getArray(v);
+            std::stringstream ss;
+            ss << "[";
+
+            for (size_t i = 0; i < std::min((size_t) 3, a.size()); ++i)
+                ss << toString(a[i]) << ", ";
+
+            if (a.size() > 3)
+            {
+                ss << "...]";
+                return ss.str();
+            }
+
+            auto s = ss.str();
+            return s.substr(0, s.size() - 2) + "]";
+        }
+        if (isFloat32Array(v))
+        {
+            auto& fa = getFloat32Array(v);
+            std::stringstream ss;
+            ss << "[";
+
+            for (size_t i = 0; i < std::min((size_t) 3, fa.size()); ++i)
+                ss << std::to_string(fa[i]) << ", ";
+
+            if (fa.size() > 3)
+            {
+                ss << "...]";
+                return ss.str();
+            }
+
+            auto s = ss.str();
+            return s.substr(0, s.size() - 2) + "]";
+        }
+        if (isObject(v))
+        {
+            std::stringstream ss;
+            ss << "{\n";
+
+            for (auto const& [k, val] : getObject(v)) {
+                ss << "    " << k << ": " << toString(val) << "\n";
+            }
+
+            ss << "}\n";
+            return ss.str();
+        }
+
+        // TODO
+        if (isFunction(v)) { return "[Object Function]"; }
+
+        return "undefined";
+    }
+
     static inline std::ostream& operator<< (std::ostream& s, Value const& v)
     {
-        s << v.toString();
+        s << toString(v);
         return s;
     }
 
-} // namespace js
 } // namespace elem

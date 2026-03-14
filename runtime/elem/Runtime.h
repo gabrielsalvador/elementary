@@ -10,7 +10,6 @@
 #include "GraphRenderSequence.h"
 #include "Types.h"
 #include "Value.h"
-#include "JSON.h"
 
 
 #ifndef ELEM_DBG
@@ -45,7 +44,7 @@ namespace elem
 
         //==============================================================================
         // Apply graph rendering instructions
-        int applyInstructions(js::Array const& batch);
+        int applyInstructions(Array const& batch);
 
         // Run the internal audio processing callback
         void process(
@@ -61,7 +60,7 @@ namespace elem
         //
         // This raises events from the processing graph such as new data from analysis nodes
         // or errors encountered while processing.
-        void processQueuedEvents(std::function<void(std::string const&, js::Value)>&& evtCallback);
+        void processQueuedEvents(std::function<void(std::string const&, Value)>&& evtCallback);
 
         // Reset the internal graph nodes
         //
@@ -107,7 +106,7 @@ namespace elem
 
         //==============================================================================
         // Returns a copy of the internal graph state representing all known nodes and properties
-        js::Object snapshot();
+        Object snapshot();
 
     private:
         //==============================================================================
@@ -120,10 +119,10 @@ namespace elem
           COMMIT_UPDATES = 5,
         };
 
-        int createNode(js::Value const& nodeId, js::Value const& type);
-        int setProperty(js::Value const& nodeId, js::Value const& prop, js::Value const& v);
-        int appendChild(js::Value const& parentId, js::Value const& childId, js::Value const& childOutputChannel);
-        int activateRoots(js::Array const& v);
+        int createNode(Value const& nodeId, Value const& type);
+        int setProperty(Value const& nodeId, Value const& prop, Value const& v);
+        int appendChild(Value const& parentId, Value const& childId, Value const& childOutputChannel);
+        int activateRoots(Array const& v);
 
         BufferAllocator<FloatType> bufferAllocator;
         std::shared_ptr<GraphRenderSequence<FloatType>> rtRenderSeq;
@@ -167,22 +166,22 @@ namespace elem
 
     //==============================================================================
     template <typename FloatType>
-    int Runtime<FloatType>::applyInstructions(elem::js::Array const& batch)
+    int Runtime<FloatType>::applyInstructions(elem::Array const& batch)
     {
         bool shouldRebuild = false;
 
         // TODO: For correct transaction semantics here, we should createNode into a separate
         // map that only gets merged into the actual nodeMap on commitUpdaes
         for (auto& next : batch) {
-            if (!next.isArray())
+            if (!isArray(next))
                 return ReturnCode::InvalidInstructionFormat();
 
-            auto const& ar = next.getArray();
+            auto const& ar = getArray(next);
 
-            if(!ar[0].isNumber())
+            if(!isNumber(ar[0]))
                 return ReturnCode::InvalidInstructionFormat();
 
-            auto const cmd = static_cast<InstructionType>(static_cast<int>((elem::js::Number) ar[0]));
+            auto const cmd = static_cast<InstructionType>(static_cast<int>(std::get<elem::Number>(ar[0])));
             auto res = ReturnCode::Ok();
 
             switch (cmd) {
@@ -196,7 +195,7 @@ namespace elem
                     res = appendChild(ar[1], ar[2], ar[3]);
                     break;
                 case InstructionType::ACTIVATE_ROOTS:
-                    res = activateRoots(ar[1]);
+                    res = activateRoots(elem::getArray(ar[1]));
                     shouldRebuild = true;
                     break;
                 case InstructionType::COMMIT_UPDATES:
@@ -291,13 +290,13 @@ namespace elem
 
     //==============================================================================
     template <typename FloatType>
-    int Runtime<FloatType>::createNode(js::Value const& a1, js::Value const& a2)
+    int Runtime<FloatType>::createNode(Value const& a1, Value const& a2)
     {
-        if (!a1.isNumber() || !a2.isString())
+        if (!isNumber(a1) || !isString(a2))
             return ReturnCode::InvalidInstructionFormat();
 
-        auto const nodeId = static_cast<int32_t>((js::Number) a1);
-        auto const type = (js::String) a2;
+        auto const nodeId = static_cast<int32_t>(std::get<Number>(a1));
+        auto const type = std::get<String>(a2);
 
         ELEM_DBG("[Native] createNode " << type << "#" << nodeIdToHex(nodeId));
 
@@ -313,15 +312,15 @@ namespace elem
     }
 
     template <typename FloatType>
-    int Runtime<FloatType>::setProperty(js::Value const& a1, js::Value const& a2, js::Value const& v)
+    int Runtime<FloatType>::setProperty(Value const& a1, Value const& a2, Value const& v)
     {
-        if (!a1.isNumber() || !a2.isString())
+        if (!isNumber(a1) || !isString(a2))
             return ReturnCode::InvalidInstructionFormat();
 
-        auto const nodeId = static_cast<int32_t>((js::Number) a1);
-        auto const prop = (js::String) a2;
+        auto const nodeId = static_cast<int32_t>(std::get<Number>(a1));
+        auto const prop = std::get<String>(a2);
 
-        ELEM_DBG("[Native] setProperty " << nodeIdToHex(nodeId) << " " << prop << " " << v.toString());
+        ELEM_DBG("[Native] setProperty " << nodeIdToHex(nodeId) << " " << prop << " " << toString(v));
 
         if (nodeTable.find(nodeId) == nodeTable.end())
             return ReturnCode::NodeNotFound();
@@ -333,14 +332,14 @@ namespace elem
     }
 
     template <typename FloatType>
-    int Runtime<FloatType>::appendChild(js::Value const& a1, js::Value const& a2, js::Value const& a3)
+    int Runtime<FloatType>::appendChild(Value const& a1, Value const& a2, Value const& a3)
     {
-        if (!a1.isNumber() || !a2.isNumber() || !a3.isNumber())
+        if (!isNumber(a1) || !isNumber(a2) || !isNumber(a3))
             return ReturnCode::InvalidInstructionFormat();
 
-        auto const parentId = static_cast<int32_t>((js::Number) a1);
-        auto const childId = static_cast<int32_t>((js::Number) a2);
-        auto const childOutputChannel = static_cast<int32_t>((js::Number) a3);
+        auto const parentId = static_cast<int32_t>(std::get<Number>(a1));
+        auto const childId = static_cast<int32_t>(std::get<Number>(a2));
+        auto const childOutputChannel = static_cast<int32_t>(std::get<Number>(a3));
 
         ELEM_DBG("[Native] appendChild " << nodeIdToHex(childId) << ":" << childOutputChannel << " to parent " << nodeIdToHex(parentId));
 
@@ -366,20 +365,20 @@ namespace elem
     }
 
     template <typename FloatType>
-    int Runtime<FloatType>::activateRoots(js::Array const& roots)
+    int Runtime<FloatType>::activateRoots(Array const& roots)
     {
         // Populate and activate from the incoming event
         std::set<NodeId> active;
 
         for (auto const& v : roots)
         {
-            if (!v.isNumber())
+            if (!isNumber(v))
             {
                 ELEM_DBG("[Error] activateRoot - Invalid nodeId format.");
                 return ReturnCode::InvalidInstructionFormat();
             }
 
-            int32_t nodeId = static_cast<int32_t>((js::Number)v);
+            int32_t nodeId = static_cast<int32_t>(std::get<Number>(v));
             ELEM_DBG("[Native] activateRoot " << nodeIdToHex(nodeId));
 
             // Using find() method for safe access to nodeTable elements
@@ -435,7 +434,7 @@ namespace elem
 
     //==============================================================================
     template <typename FloatType>
-    void Runtime<FloatType>::processQueuedEvents(std::function<void(std::string const&, js::Value)>&& evtCallback)
+    void Runtime<FloatType>::processQueuedEvents(std::function<void(std::string const&, Value)>&& evtCallback)
     {
         // This looks a little shady, but because of the atomic ref count in std::shared_ptr this assignment
         // is indeed thread-safe
@@ -487,9 +486,9 @@ namespace elem
     }
 
     template <typename FloatType>
-    js::Object Runtime<FloatType>::snapshot()
+    Object Runtime<FloatType>::snapshot()
     {
-        js::Object ret;
+        Object ret;
 
         for (auto& [nodeId, node] : nodeTable) {
             ret.insert({nodeIdToHex(nodeId), node->getProperties()});
@@ -548,7 +547,7 @@ namespace elem
 
         for (auto const& n : currentRoots) {
             if (auto ptr = std::dynamic_pointer_cast<RootNode<FloatType>>(nodeTable.at(n).node)) {
-                auto isActive = ptr->getPropertyWithDefault("active", (js::Boolean) false);
+                auto isActive = ptr->getPropertyWithDefault("active", Boolean(false));
 
                 if (isActive) {
                     sortedRoots.push_front(ptr);

@@ -12,16 +12,16 @@ namespace elem
     struct StereoTableNode : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val, SharedResourceMap& resources) override
+        int setProperty(std::string const& key, Value const& val, SharedResourceMap& resources) override
         {
             if (key == "path") {
-                if (!val.isString())
+                if (!isString(val))
                     return ReturnCode::InvalidPropertyType();
 
-                if (!resources.has((js::String) val))
+                if (!resources.has(std::get<String>(val)))
                     return ReturnCode::InvalidPropertyValue();
 
-                auto ref = resources.get((js::String) val);
+                auto ref = resources.get(std::get<String>(val));
                 bufferQueue.push(std::move(ref));
             }
 

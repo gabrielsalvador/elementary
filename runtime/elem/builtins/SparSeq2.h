@@ -17,14 +17,14 @@ namespace elem
     struct SparSeq2Node : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "seq") {
-                if (!val.isArray())
+                if (!isArray(val))
                     return ReturnCode::InvalidPropertyType();
 
 
-                auto& seq = val.getArray();
+                auto& seq = getArray(val);
                 auto data = seqPool.allocate();
 
                 // The data array that we get from the pool may have been
@@ -34,10 +34,10 @@ namespace elem
                 // We expect from the JavaScript side an array of event objects, where each
                 // event includes a value to take and a time at which to take that value
                 for (size_t i = 0; i < seq.size(); ++i) {
-                    auto& event = seq[i].getObject();
+                    auto& event = getObject(seq[i]);
 
-                    FloatType value = static_cast<FloatType>((js::Number) event.at("value"));
-                    double time = static_cast<double>((js::Number) event.at("time"));
+                    FloatType value = static_cast<FloatType>(std::get<Number>(event.at("value")));
+                    double time = static_cast<double>(std::get<Number>(event.at("time")));
 
                     data->insert({ time, value });
                 }
@@ -46,10 +46,10 @@ namespace elem
             }
 
             if (key == "interpolate") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                interpOrder.store(static_cast<int32_t>((js::Number) val));
+                interpOrder.store(static_cast<int32_t>(std::get<Number>(val)));
             }
 
             return GraphNode<FloatType>::setProperty(key, val);

@@ -22,24 +22,24 @@ namespace elem
     struct SampleNode : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val, SharedResourceMap& resources) override
+        int setProperty(std::string const& key, Value const& val, SharedResourceMap& resources) override
         {
             if (key == "path") {
-                if (!val.isString())
+                if (!isString(val))
                     return ReturnCode::InvalidPropertyType();
 
-                if (!resources.has((js::String) val))
+                if (!resources.has(std::get<String>(val)))
                     return ReturnCode::InvalidPropertyValue();
 
-                auto ref = resources.get((js::String) val);
+                auto ref = resources.get(std::get<String>(val));
                 bufferQueue.push(std::move(ref));
             }
 
             if (key == "mode") {
-                if (!val.isString())
+                if (!isString(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto v = (js::String) val;
+                auto v = std::get<String>(val);
 
                 if (v == "trigger") { mode.store(Mode::Trigger); }
                 if (v == "gate") { mode.store(Mode::Gate); }
@@ -47,10 +47,10 @@ namespace elem
             }
 
             if (key == "startOffset") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto const v = (js::Number) val;
+                auto const v = std::get<Number>(val);
                 auto const vi = static_cast<int>(v);
 
                 if (vi < 0)
@@ -60,10 +60,10 @@ namespace elem
             }
 
             if (key == "stopOffset") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto const v = (js::Number) val;
+                auto const v = std::get<Number>(val);
                 auto const vi = static_cast<int>(v);
 
                 if (vi < 0)

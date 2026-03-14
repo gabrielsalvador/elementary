@@ -39,7 +39,7 @@ namespace elem
             (void) readoutQueue.push({ *min, *max });
         }
 
-        void processEvents(std::function<void(std::string const&, js::Value)>& eventHandler) override {
+        void processEvents(std::function<void(std::string const&, Value)>& eventHandler) override {
             if (readoutQueue.size() <= 0)
                 return;
 
@@ -54,10 +54,10 @@ namespace elem
             }
 
             // Now we propagate the latest value
-            eventHandler("meter", js::Object({
+            eventHandler("meter", Object({
                 {"min", ro.min},
                 {"max", ro.max},
-                {"source", GraphNode<FloatType>::getPropertyWithDefault("name", js::Value())},
+                {"source", GraphNode<FloatType>::getPropertyWithDefault("name", Value())},
             }));
         }
 
@@ -108,7 +108,7 @@ namespace elem
             }
         }
 
-        void processEvents(std::function<void(std::string const&, js::Value)>& eventHandler) override {
+        void processEvents(std::function<void(std::string const&, Value)>& eventHandler) override {
             // Now we propagate the latest value if we have one.
             if (readoutQueue.size() <= 0)
                 return;
@@ -123,8 +123,8 @@ namespace elem
                 }
             }
 
-            eventHandler("snapshot", js::Object({
-                {"source", GraphNode<FloatType>::getPropertyWithDefault("name", js::Value())},
+            eventHandler("snapshot", Object({
+                {"source", GraphNode<FloatType>::getPropertyWithDefault("name", Value())},
                 {"data", ro.val},
             }));
         }
@@ -148,30 +148,30 @@ namespace elem
             : GraphNode<FloatType>::GraphNode(id, sr, blockSize)
             , ringBuffer(4)
         {
-            setProperty("channels", js::Value((js::Number) 1));
-            setProperty("size", js::Value((js::Number) 512));
+            setProperty("channels", Value(Number(1)));
+            setProperty("size", Value(Number(512)));
         }
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "size") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                if ((js::Number) val < 256 || (js::Number) val > 8192)
+                if (std::get<Number>(val) < 256 || std::get<Number>(val) > 8192)
                     return ReturnCode::InvalidPropertyValue();
             }
 
             if (key == "channels") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                if ((js::Number) val < 0 || (js::Number) val > 4)
+                if (std::get<Number>(val) < 0 || std::get<Number>(val) > 4)
                     return ReturnCode::InvalidPropertyValue();
             }
 
             if (key == "name") {
-                if (!val.isString())
+                if (!isString(val))
                     return ReturnCode::InvalidPropertyType();
             }
 
@@ -196,53 +196,53 @@ namespace elem
             ringBuffer.write(inputData, numChannels, numSamples);
         }
 
-        void processEvents(std::function<void(std::string const&, js::Value)>& eventHandler) override {
-            auto const size = static_cast<size_t>((js::Number) GraphNode<FloatType>::getPropertyWithDefault("size", js::Number(512)));
-            auto const channels = static_cast<size_t>((js::Number) GraphNode<FloatType>::getPropertyWithDefault("channels", js::Number(1)));
+        void processEvents(std::function<void(std::string const&, Value)>& eventHandler) override {
+            auto const size = static_cast<size_t>(GraphNode<FloatType>::getPropertyWithDefault("size", Number(512)));
+            auto const channels = static_cast<size_t>(GraphNode<FloatType>::getPropertyWithDefault("channels", Number(1)));
 
             if (ringBuffer.size() > size) {
                 // Retreive the scope data. Could improve the efficiency here using something
                 // like a pmr pool allocator so that on each call to processEvents here we're
                 // not actually allocating and deallocating new memory
-                js::Array scopeData (channels);
+                Array scopeData (channels);
 
                 // If our ScopeNode instance is templated on `float` then we can read from the
-                // ring buffer directly into a js::Float32Array value type
+                // ring buffer directly into a Float32Array value type
                 if constexpr (std::is_same_v<FloatType, float>) {
                     for (size_t i = 0; i < channels; ++i) {
-                        scopeData[i] = js::Float32Array(size);
-                        scratchPointers[i] = scopeData[i].getFloat32Array().data();
+                        scopeData[i] = Float32Array(size);
+                        scratchPointers[i] = getFloat32Array(scopeData[i]).data();
                     }
 
                     if (ringBuffer.read(scratchPointers.data(), channels, size)) {
-                        eventHandler("scope", js::Object({
-                            {"source", GraphNode<FloatType>::getPropertyWithDefault("name", js::Value())},
+                        eventHandler("scope", Object({
+                            {"source", GraphNode<FloatType>::getPropertyWithDefault("name", Value())},
                             {"data", std::move(scopeData)}
                         }));
                     }
                 }
 
                 // If our ScopeNode instance is templated on `double` then we read into a temporary
-                // vector of doubles before copying (and casting) to a js::Float32Array value
+                // vector of doubles before copying (and casting) to a Float32Array value
                 if constexpr (std::is_same_v<FloatType, double>) {
                     std::vector<double> temp(channels * size);
 
                     for (size_t i = 0; i < channels; ++i) {
-                        scopeData[i] = js::Float32Array(size);
+                        scopeData[i] = Float32Array(size);
                         scratchPointers[i] = temp.data() + (i * size);
                     }
 
                     if (ringBuffer.read(scratchPointers.data(), channels, size)) {
                         for (size_t i = 0; i < channels; ++i) {
-                            auto* dest = scopeData[i].getFloat32Array().data();
+                            auto* dest = getFloat32Array(scopeData[i]).data();
 
                             for (size_t j = 0; j < size; ++j) {
                                 dest[j] = static_cast<float>(temp[(i * size) + j]);
                             }
                         }
 
-                        eventHandler("scope", js::Object({
-                            {"source", GraphNode<FloatType>::getPropertyWithDefault("name", js::Value())},
+                        eventHandler("scope", Object({
+                            {"source", GraphNode<FloatType>::getPropertyWithDefault("name", Value())},
                             {"data", std::move(scopeData)}
                         }));
                     }

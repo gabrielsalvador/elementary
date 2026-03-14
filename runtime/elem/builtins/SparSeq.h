@@ -37,55 +37,55 @@ namespace elem
         // Our ChangeEvent union type.
         using ChangeEvent = std::variant<EmptyEvent, NewSequenceEvent, NewLoopPointsEvent>;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "offset") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                if ((js::Number) val < 0.0)
+                if (std::get<Number>(val) < 0.0)
                     return ReturnCode::InvalidPropertyValue();
 
-                seqOffset.store(static_cast<size_t>((js::Number) val));
+                seqOffset.store(static_cast<size_t>(std::get<Number>(val)));
             }
 
             if (key == "loop") {
-                if (val.isNull() || (val.isBool() && !val)) {
+                if (isNull(val) || (isBool(val) && !std::get<Boolean>(val))) {
                     changeEventQueue.push(ChangeEvent { NewLoopPointsEvent { -1, -1 } });
                 } else {
-                    if (!val.isArray())
+                    if (!isArray(val))
                         return ReturnCode::InvalidPropertyType();
 
-                    auto& points = val.getArray();
+                    auto& points = getArray(val);
 
                     changeEventQueue.push(ChangeEvent { NewLoopPointsEvent {
-                        static_cast<int32_t>((js::Number) points[0]),
-                        static_cast<int32_t>((js::Number) points[1]),
+                        static_cast<int32_t>(std::get<Number>(points[0])),
+                        static_cast<int32_t>(std::get<Number>(points[1])),
                     }});
                 }
             }
 
             if (key == "follow") {
-                if (!val.isBool())
+                if (!isBool(val))
                     return ReturnCode::InvalidPropertyType();
 
-                followAction.store((bool) val);
+                followAction.store(std::get<Boolean>(val));
             }
 
             if (key == "interpolate") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                holdOrder.store(static_cast<int32_t>((js::Number) val));
+                holdOrder.store(static_cast<int32_t>(std::get<Number>(val)));
             }
 
             // The estimated period of the incoming clock cycle in seconds. Used to improve the resolution
             // of the interpolation coefficient. Ignored if using zero order hold (no interpolation).
             if (key == "tickInterval") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto const ti = (js::Number) val;
+                auto const ti = std::get<Number>(val);
 
                 if (ti < 0.0)
                     return ReturnCode::InvalidPropertyValue();
@@ -95,10 +95,10 @@ namespace elem
             }
 
             if (key == "seq") {
-                if (!val.isArray())
+                if (!isArray(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto& seq = val.getArray();
+                auto& seq = getArray(val);
                 auto data = sequencePool.allocate();
 
                 // The data array that we get from the pool may have been
@@ -108,10 +108,10 @@ namespace elem
                 // We expect from the JavaScript side an array of event objects, where each
                 // event includes a value to take and a 32-bit int tick time at which to take that value.
                 for (size_t i = 0; i < seq.size(); ++i) {
-                    auto& event = seq[i].getObject();
+                    auto& event = getObject(seq[i]);
 
-                    FloatType value = static_cast<FloatType>((js::Number) event.at("value"));
-                    int32_t time = static_cast<int32_t>((js::Number) event.at("tickTime"));
+                    FloatType value = static_cast<FloatType>(std::get<Number>(event.at("value")));
+                    int32_t time = static_cast<int32_t>(std::get<Number>(event.at("tickTime")));
 
                     data->insert({time, value});
                 }

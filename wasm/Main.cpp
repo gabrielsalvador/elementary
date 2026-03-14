@@ -86,17 +86,17 @@ public:
     {
         auto v = emValToValue(payload);
 
-        if (!v.isArray()) {
-            return valueToEmVal(elem::js::Object {
+        if (!isArray(v)) {
+            return valueToEmVal(elem::Object {
                 {"success", false},
                 {"message", "Malformed message batch"},
             });
         }
 
-        auto const& batch = v.getArray();
+        auto const& batch = getArray(v);
         auto const rc = runtime->applyInstructions(batch);
 
-        return valueToEmVal(elem::js::Object {
+        return valueToEmVal(elem::Object {
             {"success", rc == elem::ReturnCode::Ok()},
             {"message", elem::ReturnCode::describe(rc)},
         });
@@ -110,10 +110,10 @@ public:
     val gc()
     {
         auto pruned = runtime->gc();
-        auto ret = elem::js::Array();
+        auto ret = elem::Array();
 
         for (auto& n : pruned) {
-            ret.push_back(elem::js::Value((double) n));
+            ret.push_back(elem::Value((double) n));
         }
 
         return valueToEmVal(ret);
@@ -124,50 +124,50 @@ public:
         auto n = emValToValue(name);
         auto buf = emValToValue(buffer);
 
-        if (!n.isString()) {
-            return valueToEmVal(elem::js::Object {
+        if (!isString(n)) {
+            return valueToEmVal(elem::Object {
                 {"success", false},
                 {"message", "name must be a string type"},
             });
         }
 
-        if (!buf.isFloat32Array() && !buf.isArray()) {
-            return valueToEmVal(elem::js::Object {
+        if (!isFloat32Array(buf) && !isArray(buf)) {
+            return valueToEmVal(elem::Object {
                 {"success", false},
                 {"message", "buffer must be an Array<Float32Array> or a Float32Array"},
             });
         }
 
-        if (buf.isArray()) {
-            auto& channels = buf.getArray();
+        if (isArray(buf)) {
+            auto& channels = getArray(buf);
             std::vector<std::vector<float>> channelData;
             std::vector<float*> channelPointers;
 
             for (size_t i = 0; i < channels.size(); ++i) {
-                if (!channels[i].isFloat32Array()) {
-                    return valueToEmVal(elem::js::Object {
+                if (!elem::isFloat32Array(channels[i])) {
+                    return valueToEmVal(elem::Object {
                         {"success", false},
                         {"message", "buffer must be an Array<Float32Array> or a Float32Array"},
                     });
                 }
 
-                channelData.push_back(channels[i].getFloat32Array());
+                channelData.push_back(elem::getFloat32Array(channels[i]));
                 channelPointers.push_back(channelData[i].data());
             }
 
             auto resource = std::make_unique<elem::AudioBufferResource>(channelPointers.data(), channelPointers.size(), channelData[0].size());
-            auto result = runtime->addSharedResource((elem::js::String) n, std::move(resource));
+            auto result = runtime->addSharedResource((elem::String) n, std::move(resource));
 
-            return valueToEmVal(elem::js::Object {
+            return valueToEmVal(elem::Object {
                 {"success", result},
                 {"message", result ? "Ok" : "cannot overwrite existing shared resource"},
             });
         }
 
-        auto& f32vec = buf.getFloat32Array();
-        auto result = runtime->addSharedResource((elem::js::String) n, std::make_unique<elem::AudioBufferResource>(f32vec.data(), f32vec.size()));
+        auto& f32vec = getFloat32Array(buf);
+        auto result = runtime->addSharedResource((elem::String) n, std::make_unique<elem::AudioBufferResource>(f32vec.data(), f32vec.size()));
 
-        return valueToEmVal(elem::js::Object {
+        return valueToEmVal(elem::Object {
             {"success", result},
             {"message", result ? "Ok" : "cannot overwrite existing shared resource"},
         });
@@ -218,10 +218,10 @@ public:
     /** Callback events. */
     void processQueuedEvents(val callback)
     {
-        elem::js::Array batch;
+        elem::Array batch;
 
-        runtime->processQueuedEvents([this, &batch](std::string const& type, elem::js::Value evt) {
-            batch.push_back(elem::js::Object({
+        runtime->processQueuedEvents([this, &batch](std::string const& type, elem::Value evt) {
+            batch.push_back(elem::Object({
                 {"type", type},
                 {"event", evt}
             }));
@@ -243,30 +243,30 @@ public:
 
 private:
     //==============================================================================
-    elem::js::Value emValToValue (val const& v)
+    elem::Value emValToValue (val const& v)
     {
-        if (v.isUndefined())
-            return elem::js::Undefined();
-        if (v.isNull())
-            return elem::js::Null();
+        if (isUndefined(v))
+            return elem::Undefined();
+        if (isNull(v))
+            return elem::Null();
         if (v.isTrue())
-            return elem::js::Value(true);
+            return elem::Value(true);
         if (v.isFalse())
-            return elem::js::Value(false);
-        if (v.isNumber())
-            return elem::js::Value(v.as<double>());
-        if (v.isString())
-            return elem::js::Value(v.as<std::string>());
+            return elem::Value(false);
+        if (isNumber(v))
+            return elem::Value(v.as<double>());
+        if (isString(v))
+            return elem::Value(v.as<std::string>());
         if (v.instanceof(val::global("Float32Array"))) {
             // This conversion function is part of the emscripten namespace for
             // mapping from emscripten::val to a simple std::vector.
-            return elem::js::Value(convertJSArrayToNumberVector<float>(v));
+            return elem::Value(convertJSArrayToNumberVector<float>(v));
         }
 
-        if (v.isArray())
+        if (isArray(v))
         {
             auto const length = v["length"].as<int>();
-            elem::js::Array ret;
+            elem::Array ret;
 
             for (int i = 0; i < length; ++i)
             {
@@ -278,7 +278,7 @@ private:
 
         // We don't support functions yet...
         if (v.instanceof(val::global("Function"))) {
-            return elem::js::Undefined();
+            return elem::Undefined();
         }
 
         // This case must come at the end, because Arrays, Functions, Float32Arrays,
@@ -287,7 +287,7 @@ private:
             auto const keys = val::global("Object").call<val>("keys", v);
             auto const numKeys = keys["length"].as<size_t>();
 
-            elem::js::Object ret;
+            elem::Object ret;
 
             for (size_t i = 0; i < numKeys; ++i) {
                 ret.insert({keys[i].as<std::string>(), emValToValue(v[keys[i]])});
@@ -296,25 +296,25 @@ private:
             return ret;
         }
 
-        return elem::js::Undefined();
+        return elem::Undefined();
     }
 
-    val valueToEmVal (elem::js::Value const& v)
+    val valueToEmVal (elem::Value const& v)
     {
-        if (v.isUndefined())
+        if (isUndefined(v))
             return val::undefined();
-        if (v.isNull())
+        if (isNull(v))
             return val::null();
-        if (v.isBool())
+        if (isBool(v))
             return val((bool) v);
-        if (v.isNumber())
-            return val((elem::js::Number) v);
-        if (v.isString())
-            return val((elem::js::String) v);
+        if (isNumber(v))
+            return val((elem::Number) v);
+        if (isString(v))
+            return val((elem::String) v);
 
-        if (v.isArray())
+        if (isArray(v))
         {
-            auto& va = v.getArray();
+            auto& va = getArray(v);
             auto ret = val::array();
 
             for (size_t i = 0; i < va.size(); ++i)
@@ -325,9 +325,9 @@ private:
             return ret;
         }
 
-        if (v.isFloat32Array())
+        if (isFloat32Array(v))
         {
-            auto& va = v.getFloat32Array();
+            auto& va = getFloat32Array(v);
 
             auto opts = val::object();
             opts.set("length", va.size());
@@ -342,9 +342,9 @@ private:
             return ret;
         }
 
-        if (v.isObject())
+        if (isObject(v))
         {
-            auto& vo = v.getObject();
+            auto& vo = getObject(v);
             auto ret = val::object();
 
             for (auto const& [key, x] : vo)

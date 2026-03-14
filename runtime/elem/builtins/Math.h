@@ -92,13 +92,13 @@ namespace elem
     struct IdentityNode : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "channel") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                channel.store(static_cast<int>((js::Number) val));
+                channel.store(static_cast<int>(std::get<Number>(val)));
             }
 
             return GraphNode<FloatType>::setProperty(key, val);

@@ -58,7 +58,7 @@ namespace elem
             }
         }
 
-        void processEvents(std::function<void(std::string const&, js::Value)>& eventHandler) override {
+        void processEvents(std::function<void(std::string const&, Value)>& eventHandler) override {
             auto const samplesAvailable = ringBuffer.size();
 
             if (samplesAvailable > 0) {
@@ -73,7 +73,7 @@ namespace elem
 
             if (relayReady.exchange(false)) {
                 // Now we can go ahead and relay the data
-                js::Float32Array copy;
+                Float32Array copy;
 
                 auto relaySize = relayBuffer.size();
                 auto relayData = relayBuffer.data();
@@ -87,8 +87,8 @@ namespace elem
 
                 relayBuffer.clear();
 
-                eventHandler("capture", js::Object({
-                    {"source", GraphNode<FloatType>::getPropertyWithDefault("name", js::Value())},
+                eventHandler("capture", Object({
+                    {"source", GraphNode<FloatType>::getPropertyWithDefault("name", Value())},
                     {"data", copy}
                 }));
             }

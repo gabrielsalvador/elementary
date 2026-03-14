@@ -178,22 +178,22 @@ namespace elem
         }
 
 
-        int setProperty(std::string const& key, js::Value const& val, SharedResourceMap& resources) override
+        int setProperty(std::string const& key, Value const& val, SharedResourceMap& resources) override
         {
             if constexpr (WithStretch) {
                 if (key == "shift") {
-                    if (!val.isNumber())
+                    if (!isNumber(val))
                         return ReturnCode::InvalidPropertyType();
 
-                    auto shift = (js::Number) val;
+                    auto shift = std::get<Number>(val);
                     stretch.setTransposeSemitones(shift);
                 }
 
                 if (key == "stretch") {
-                    if (!val.isNumber())
+                    if (!isNumber(val))
                         return ReturnCode::InvalidPropertyType();
 
-                    auto _stretchFactor = (js::Number) val;
+                    auto _stretchFactor = std::get<Number>(val);
 
                     if (_stretchFactor < 0.25 || _stretchFactor > 4.0)
                         return ReturnCode::InvalidPropertyValue();
@@ -203,10 +203,10 @@ namespace elem
             }
 
             if (key == "duration") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto dur = (js::Number) val;
+                auto dur = std::get<Number>(val);
 
                 if (dur <= 0.0)
                     return ReturnCode::InvalidPropertyValue();
@@ -215,21 +215,21 @@ namespace elem
             }
 
             if (key == "path") {
-                if (!val.isString())
+                if (!isString(val))
                     return ReturnCode::InvalidPropertyType();
 
-                if (!resources.has((js::String) val))
+                if (!resources.has(std::get<String>(val)))
                     return ReturnCode::InvalidPropertyValue();
 
-                auto ref = resources.get((js::String) val);
+                auto ref = resources.get(std::get<String>(val));
                 bufferQueue.push(std::move(ref));
             }
 
             if (key == "seq") {
-                if (!val.isArray())
+                if (!isArray(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto& seq = val.getArray();
+                auto& seq = getArray(val);
 
                 auto data = seqPool.allocate();
 
@@ -240,10 +240,10 @@ namespace elem
                 // We expect from the JavaScript side an array of event objects, where each
                 // event includes a value to take and a time at which to take that value
                 for (size_t i = 0; i < seq.size(); ++i) {
-                    auto& event = seq[i].getObject();
+                    auto& event = getObject(seq[i]);
 
-                    FloatType value = static_cast<FloatType>((js::Number) event.at("value"));
-                    double time = static_cast<double>((js::Number) event.at("time"));
+                    FloatType value = static_cast<FloatType>(std::get<Number>(event.at("value")));
+                    double time = static_cast<double>(std::get<Number>(event.at("time")));
 
                     data->insert({ time, value });
                 }

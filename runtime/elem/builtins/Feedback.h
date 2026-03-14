@@ -21,13 +21,13 @@ namespace elem
     struct TapInNode : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val, SharedResourceMap& resources) override
+        int setProperty(std::string const& key, Value const& val, SharedResourceMap& resources) override
         {
             if (key == "name") {
-                if (!val.isString())
+                if (!isString(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto ref = resources.getTapResource((js::String) val, [=]() {
+                auto ref = resources.getTapResource(std::get<String>(val), [=]() {
                     return std::make_shared<AudioBufferResource>(1, GraphNode<FloatType>::getBlockSize());
                 });
 
@@ -71,13 +71,13 @@ namespace elem
             std::fill_n(delayBuffer.data(), blockSize, FloatType(0));
         }
 
-        int setProperty(std::string const& key, js::Value const& val, SharedResourceMap& resources) override
+        int setProperty(std::string const& key, Value const& val, SharedResourceMap& resources) override
         {
             if (key == "name") {
-                if (!val.isString())
+                if (!isString(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto ref = resources.getTapResource((js::String) val, [=]() {
+                auto ref = resources.getTapResource(std::get<String>(val), [=]() {
                     return std::make_shared<AudioBufferResource>(1, GraphNode<FloatType>::getBlockSize());
                 });
 

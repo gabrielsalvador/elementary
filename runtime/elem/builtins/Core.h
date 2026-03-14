@@ -30,34 +30,34 @@ namespace elem
             return active() || !fade.settled();
         }
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "active") {
-                if (!val.isBool())
+                if (!isBool(val))
                     return ReturnCode::InvalidPropertyType();
 
-                if (val)
+                if (std::get<Boolean>(val))
                     fade.fadeIn();
                 else
                     fade.fadeOut();
             }
 
             if (key == "channel") {
-                channelIndex.store(static_cast<int>((js::Number) val));
+                channelIndex.store(static_cast<int>(std::get<Number>(val)));
             }
 
             if (key == "fadeInMs") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                fade.setFadeInTimeMs(GraphNode<FloatType>::getSampleRate(), (js::Number) val);
+                fade.setFadeInTimeMs(GraphNode<FloatType>::getSampleRate(), std::get<Number>(val));
             }
 
             if (key == "fadeOutMs") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                fade.setFadeOutTimeMs(GraphNode<FloatType>::getSampleRate(), (js::Number) val);
+                fade.setFadeOutTimeMs(GraphNode<FloatType>::getSampleRate(), std::get<Number>(val));
             }
 
             return GraphNode<FloatType>::setProperty(key, val);
@@ -139,13 +139,13 @@ namespace elem
     struct ConstNode : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "value") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                value.store(FloatType((js::Number) val));
+                value.store(FloatType(std::get<Number>(val)));
             }
 
             return GraphNode<FloatType>::setProperty(key, val);
@@ -289,13 +289,13 @@ namespace elem
     struct MaxHold : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "hold") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto h = GraphNode<FloatType>::getSampleRate() * 0.001 * (js::Number) val;
+                auto h = GraphNode<FloatType>::getSampleRate() * 0.001 * std::get<Number>(val);
                 holdTimeSamples.store(static_cast<uint32_t>(h));
             }
 
@@ -349,16 +349,16 @@ namespace elem
     struct OnceNode : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "arm") {
-                if (!val.isBool())
+                if (!isBool(val))
                     return ReturnCode::InvalidPropertyType();
 
 
                 // We don't let the incoming prop actually disarm.
                 if (!armed.load()) {
-                    armed.store((bool) val);
+                    armed.store(std::get<Boolean>(val));
                 }
             }
 
@@ -408,37 +408,37 @@ namespace elem
     struct SequenceNode : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "hold") {
-                if (!val.isBool())
+                if (!isBool(val))
                     return ReturnCode::InvalidPropertyType();
 
-                wantsHold.store((js::Boolean) val);
+                wantsHold.store(std::get<Boolean>(val));
             }
 
             if (key == "loop") {
-                if (!val.isBool())
+                if (!isBool(val))
                     return ReturnCode::InvalidPropertyType();
 
-                wantsLoop.store((js::Boolean) val);
+                wantsLoop.store(std::get<Boolean>(val));
             }
 
             if (key == "offset") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                if ((js::Number) val < 0.0)
+                if (std::get<Number>(val) < 0.0)
                     return ReturnCode::InvalidPropertyValue();
 
-                seqOffset.store(static_cast<size_t>((js::Number) val));
+                seqOffset.store(static_cast<size_t>(std::get<Number>(val)));
             }
 
             if (key == "seq") {
-                if (!val.isArray())
+                if (!isArray(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto& seq = val.getArray();
+                auto& seq = getArray(val);
                 auto data = sequencePool.allocate();
 
                 // The data array that we get from the pool may have been
@@ -447,7 +447,7 @@ namespace elem
                 data->resize(seq.size());
 
                 for (size_t i = 0; i < seq.size(); ++i)
-                    data->at(i) = FloatType((js::Number) seq[i]);
+                    data->at(i) = FloatType(std::get<Number>(seq[i]));
 
                 // Finally, we push our new sequence data into the event
                 // queue for the realtime thread.

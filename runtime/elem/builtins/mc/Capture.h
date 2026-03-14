@@ -15,16 +15,16 @@ namespace elem
     struct MCCaptureNode : public GraphNode<FloatType> {
         using GraphNode<FloatType>::GraphNode;
 
-        int setProperty(std::string const& key, js::Value const& val) override
+        int setProperty(std::string const& key, Value const& val) override
         {
             if (key == "_internal:numChildren") {
-                if (!val.isNumber())
+                if (!isNumber(val))
                     return ReturnCode::InvalidPropertyType();
 
-                auto numChildren = (js::Number) val;
+                auto numChildren = std::get<Number>(val);
 
                 if (numChildren > 1.0) {
-                    auto numCaptureChans = static_cast<size_t>((js::Number) val) - 1;
+                    auto numCaptureChans = static_cast<size_t>(std::get<Number>(val)) - 1;
                     ringBuffer = std::make_unique<MultiChannelRingBuffer<FloatType>>(numCaptureChans, elem::bitceil(static_cast<int>(GraphNode<FloatType>::getSampleRate())));
                     relayBuffer.resize(numCaptureChans, 8192);
                 }
@@ -100,7 +100,7 @@ namespace elem
             }
         }
 
-        void processEvents(std::function<void(std::string const&, js::Value)>& eventHandler) override {
+        void processEvents(std::function<void(std::string const&, Value)>& eventHandler) override {
             auto samplesAvailable = static_cast<int>(ringBuffer->size());
 
             while (ringBuffer && samplesAvailable > 0) {
@@ -117,10 +117,10 @@ namespace elem
                 samplesAvailable -= numSamplesToRead;
 
                 // Push to pending event object
-                pendingEventData.resize(numChansToRead, js::Float32Array());
+                pendingEventData.resize(numChansToRead, Float32Array());
 
                 for (size_t i = 0; i < numChansToRead; ++i) {
-                    auto& channelCopy = pendingEventData[i].getFloat32Array();
+                    auto& channelCopy = getFloat32Array(pendingEventData[i]);
                     auto currentSize = channelCopy.size();
 
                     channelCopy.resize(currentSize + numSamplesToRead);
@@ -134,13 +134,13 @@ namespace elem
 
             // Here we can go ahead and relay the data
             if (relayReady.exchange(false)) {
-                eventHandler("mc.capture", js::Object({
-                    {"source", GraphNode<FloatType>::getPropertyWithDefault("name", js::Value())},
+                eventHandler("mc.capture", Object({
+                    {"source", GraphNode<FloatType>::getPropertyWithDefault("name", Value())},
                     {"data", pendingEventData}
                 }));
 
                 for (auto& chan : pendingEventData) {
-                    chan.getFloat32Array().clear();
+                    getFloat32Array(chan).clear();
                 }
             }
         }
@@ -148,7 +148,7 @@ namespace elem
         std::unique_ptr<MultiChannelRingBuffer<FloatType>> ringBuffer;
         AudioBuffer<FloatType> relayBuffer;
         std::atomic<bool> relayReady = false;
-        js::Array pendingEventData;
+        Array pendingEventData;
 
         Change<FloatType> change;
         bool capturing = false;
