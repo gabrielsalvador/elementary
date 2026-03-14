@@ -10,75 +10,21 @@ on:
       - '**'
 
 jobs:
-  native:
+  rust:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
+
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Build
-        shell: bash
-        run: |
-          set -x
-          set -e
+        run: cargo build
 
-          # Build the native binaries
-          mkdir -p ./build/native/
-          pushd ./build/native/
-          cmake \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=./out/ \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 \
-            ../..
-
-          cmake --build . --config Release -j 8
-          popd
-
-  wasm:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          registry-url: 'https://registry.npmjs.org'
-          always-auth: true
-
-      - name: Lerna build and test
-        shell: bash
-        working-directory: ./js
-        run: |
-          npm install
-          npx lerna bootstrap
-          npx lerna run wasm --concurrency=1
-          npx lerna run build
-          npx lerna run test
-
-      - name: Publish
-        shell: bash
-        working-directory: ./js
-        if: ${{ github.ref_type == 'branch' && github.ref_name == 'develop' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          lerna publish from-package --yes --dist-tag next
-
-      - name: Tag Latest
-        shell: bash
-        working-directory: ./js
-        if: ${{ github.ref_type == 'branch' && github.ref_name == 'main' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          for PKG in $(npx lerna ls --json | jq -r '.[] | .name + "@" + .version');
-          do
-            npm dist-tag add $PKG latest
-          done
+      - name: Test
+        run: cargo test
