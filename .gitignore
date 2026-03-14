@@ -13,3 +13,4 @@ node_modules
 js/**/lib/bs
 js/packages/**/binaries/
 js/packages/**/*.min.js
+target/
