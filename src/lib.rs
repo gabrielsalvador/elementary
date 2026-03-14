@@ -56,6 +56,203 @@ fn return_code_to_result(code: i32) -> Result<(), Error> {
 }
 
 //==============================================================================
+// Node types
+//==============================================================================
+
+/// All available node types in Elementary Audio.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum NodeType {
+    // Core
+    Const,
+    Phasor,
+    Sphasor,
+    Sr,
+    Root,
+    In,
+
+    // Math/Unary
+    Sin,
+    Cos,
+    Tan,
+    Tanh,
+    Asinh,
+    Ln,
+    Log,
+    Log2,
+    Ceil,
+    Floor,
+    Round,
+    Sqrt,
+    Exp,
+    Abs,
+
+    // Binary
+    Le,
+    Leq,
+    Ge,
+    Geq,
+    Pow,
+    Eq,
+    And,
+    Or,
+
+    // Reducing
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Min,
+    Max,
+
+    // Sequence/Control
+    Seq,
+    Seq2,
+    Sparseq,
+    Sparseq2,
+    Counter,
+    Accum,
+    Latch,
+    Maxhold,
+    Once,
+
+    // Delays
+    Delay,
+    Sdelay,
+    Z,
+
+    // Filters
+    Pole,
+    Env,
+    Biquad,
+    Prewarp,
+    Mm1p,
+    Svf,
+    Svfshelf,
+
+    // Feedback
+    TapIn,
+    TapOut,
+
+    // Sampling/Tables
+    Sample,
+    Sampleseq,
+    Sampleseq2,
+    Table,
+    McCaptrue,
+    McSample,
+    McSampleseq,
+    McSampleseq2,
+    McTable,
+
+    // Oscillators
+    Blepsaw,
+    Blepsquare,
+    Bleptriangle,
+
+    // Analysis
+    Meter,
+    Scope,
+    Snapshot,
+    Capture,
+
+    // Noise
+    Rand,
+}
+
+impl NodeType {
+    /// Get the string representation of this node type for the C++ runtime.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            NodeType::Const => "const",
+            NodeType::Phasor => "phasor",
+            NodeType::Sphasor => "sphasor",
+            NodeType::Sr => "sr",
+            NodeType::Root => "root",
+            NodeType::In => "in",
+
+            NodeType::Sin => "sin",
+            NodeType::Cos => "cos",
+            NodeType::Tan => "tan",
+            NodeType::Tanh => "tanh",
+            NodeType::Asinh => "asinh",
+            NodeType::Ln => "ln",
+            NodeType::Log => "log",
+            NodeType::Log2 => "log2",
+            NodeType::Ceil => "ceil",
+            NodeType::Floor => "floor",
+            NodeType::Round => "round",
+            NodeType::Sqrt => "sqrt",
+            NodeType::Exp => "exp",
+            NodeType::Abs => "abs",
+
+            NodeType::Le => "le",
+            NodeType::Leq => "leq",
+            NodeType::Ge => "ge",
+            NodeType::Geq => "geq",
+            NodeType::Pow => "pow",
+            NodeType::Eq => "eq",
+            NodeType::And => "and",
+            NodeType::Or => "or",
+
+            NodeType::Add => "add",
+            NodeType::Sub => "sub",
+            NodeType::Mul => "mul",
+            NodeType::Div => "div",
+            NodeType::Mod => "mod",
+            NodeType::Min => "min",
+            NodeType::Max => "max",
+
+            NodeType::Seq => "seq",
+            NodeType::Seq2 => "seq2",
+            NodeType::Sparseq => "sparseq",
+            NodeType::Sparseq2 => "sparseq2",
+            NodeType::Counter => "counter",
+            NodeType::Accum => "accum",
+            NodeType::Latch => "latch",
+            NodeType::Maxhold => "maxhold",
+            NodeType::Once => "once",
+
+            NodeType::Delay => "delay",
+            NodeType::Sdelay => "sdelay",
+            NodeType::Z => "z",
+
+            NodeType::Pole => "pole",
+            NodeType::Env => "env",
+            NodeType::Biquad => "biquad",
+            NodeType::Prewarp => "prewarp",
+            NodeType::Mm1p => "mm1p",
+            NodeType::Svf => "svf",
+            NodeType::Svfshelf => "svfshelf",
+
+            NodeType::TapIn => "tapIn",
+            NodeType::TapOut => "tapOut",
+
+            NodeType::Sample => "sample",
+            NodeType::Sampleseq => "sampleseq",
+            NodeType::Sampleseq2 => "sampleseq2",
+            NodeType::Table => "table",
+            NodeType::McCaptrue => "mc.capture",
+            NodeType::McSample => "mc.sample",
+            NodeType::McSampleseq => "mc.sampleseq",
+            NodeType::McSampleseq2 => "mc.sampleseq2",
+            NodeType::McTable => "mc.table",
+
+            NodeType::Blepsaw => "blepsaw",
+            NodeType::Blepsquare => "blepsquare",
+            NodeType::Bleptriangle => "bleptriangle",
+
+            NodeType::Meter => "meter",
+            NodeType::Scope => "scope",
+            NodeType::Snapshot => "snapshot",
+            NodeType::Capture => "capture",
+
+            NodeType::Rand => "rand",
+        }
+    }
+}
+
+//==============================================================================
 // Property values
 //==============================================================================
 
@@ -141,8 +338,8 @@ impl InstructionBatch {
     }
 
     /// Create a new node with the given id and type.
-    pub fn create_node(&mut self, node_id: i32, node_type: &str) {
-        let c_type = CString::new(node_type).expect("node_type must not contain null bytes");
+    pub fn create_node(&mut self, node_id: i32, node_type: NodeType) {
+        let c_type = CString::new(node_type.as_str()).expect("node_type.as_str() must not contain null bytes");
         unsafe { ffi::elem_batch_create_node(self.ptr, node_id, c_type.as_ptr()) }
     }
 
@@ -402,11 +599,11 @@ mod tests {
         let mut batch = InstructionBatch::new();
 
         // const(440) -> sin -> root(channel=0)
-        batch.create_node(1, "const");
+        batch.create_node(1, NodeType::Const);
         batch.set_property(1, "value", 440.0);
-        batch.create_node(2, "sin");
+        batch.create_node(2, NodeType::Sin);
         batch.append_child(2, 1, 0);
-        batch.create_node(3, "root");
+        batch.create_node(3, NodeType::Root);
         batch.set_property(3, "channel", 0.0);
         batch.append_child(3, 2, 0);
         batch.activate_roots(&[3]);
@@ -438,9 +635,9 @@ mod tests {
         let mut rt = Runtime::new(44100.0, 512);
 
         let mut batch = InstructionBatch::new();
-        batch.create_node(1, "const");
+        batch.create_node(1, NodeType::Const);
         batch.set_property(1, "value", 0.5);
-        batch.create_node(2, "root");
+        batch.create_node(2, NodeType::Root);
         batch.set_property(2, "channel", 0.0);
         batch.append_child(2, 1, 0);
         batch.activate_roots(&[2]);
@@ -491,9 +688,9 @@ mod tests {
         let mut rt = Runtime::new(44100.0, 512);
         let mut batch = InstructionBatch::new();
 
-        batch.create_node(1, "const");
+        batch.create_node(1, NodeType::Const);
         batch.set_property(1, "value", 1.0);
-        batch.create_node(2, "root");
+        batch.create_node(2, NodeType::Root);
         batch.set_property(2, "channel", 0.0);
         batch.append_child(2, 1, 0);
         batch.activate_roots(&[2]);
