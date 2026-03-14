@@ -295,4 +295,22 @@ void elem_runtime_prune_shared_resources(ElemRT* rt)
     rt->pruneSharedResources();
 }
 
+//------------------------------------------------------------------------------
+// Graph introspection
+//------------------------------------------------------------------------------
+// Returns a JSON snapshot of the graph. Caller must free the returned string with elem_free_string.
+char* elem_runtime_snapshot(ElemRT* rt)
+{
+    auto obj = rt->snapshot();
+    std::string json = valueToJson(elem::Value(std::move(obj)));
+    char* result = static_cast<char*>(std::malloc(json.size() + 1));
+    std::memcpy(result, json.c_str(), json.size() + 1);
+    return result;
+}
+
+void elem_free_string(char* s)
+{
+    std::free(s);
+}
+
 } // extern "C"

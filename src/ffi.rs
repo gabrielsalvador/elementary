@@ -122,4 +122,8 @@ extern "C" {
     ) -> c_int;
 
     pub fn elem_runtime_prune_shared_resources(rt: *mut ElemRuntime);
+
+    // Graph introspection
+    pub fn elem_runtime_snapshot(rt: *mut ElemRuntime) -> *mut c_char;
+    pub fn elem_free_string(s: *mut c_char);
 }

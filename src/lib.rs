@@ -575,6 +575,17 @@ impl Runtime {
     pub fn prune_shared_resources(&mut self) {
         unsafe { ffi::elem_runtime_prune_shared_resources(self.ptr) }
     }
+
+    /// Returns a JSON snapshot of the entire graph including node types,
+    /// properties, and inlet connections.
+    pub fn snapshot(&mut self) -> String {
+        unsafe {
+            let ptr = ffi::elem_runtime_snapshot(self.ptr);
+            let s = CStr::from_ptr(ptr).to_string_lossy().into_owned();
+            ffi::elem_free_string(ptr);
+            s
+        }
+    }
 }
 
 impl Drop for Runtime {

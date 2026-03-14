@@ -136,6 +136,7 @@ namespace elem
 
         struct GraphEntry {
             std::shared_ptr<GraphNode<FloatType>> node;
+            std::string type;
             std::vector<InletConnection> inlets;
             std::vector<OutletConnection> outlets;
         };
@@ -306,7 +307,7 @@ namespace elem
             return ReturnCode::NodeAlreadyExists();
 
         auto node = nodeFactory[type](nodeId, sampleRate, blockSize);
-        nodeTable.insert({nodeId, {node, {}, {}}});
+        nodeTable.insert({nodeId, {node, type, {}, {}}});
 
         return ReturnCode::Ok();
     }
@@ -490,8 +491,21 @@ namespace elem
     {
         Object ret;
 
-        for (auto& [nodeId, node] : nodeTable) {
-            ret.insert({nodeIdToHex(nodeId), node->getProperties()});
+        for (auto& [nodeId, entry] : nodeTable) {
+            Object nodeObj;
+            nodeObj.insert({"type", Value(entry.type)});
+            nodeObj.insert({"properties", Value(entry.node->getProperties())});
+
+            Array inletsArr;
+            for (auto const& inlet : entry.inlets) {
+                Object inletObj;
+                inletObj.insert({"source", Value(static_cast<Number>(inlet.source))});
+                inletObj.insert({"channel", Value(static_cast<Number>(inlet.outletChannel))});
+                inletsArr.push_back(Value(std::move(inletObj)));
+            }
+            nodeObj.insert({"inlets", Value(std::move(inletsArr))});
+
+            ret.insert({nodeIdToHex(nodeId), Value(std::move(nodeObj))});
         }
 
         return ret;
