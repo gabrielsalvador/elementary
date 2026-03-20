@@ -162,6 +162,97 @@ pub enum NodeType {
 
 impl NodeType {
     /// Get the string representation of this node type for the C++ runtime.
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "const" => Some(NodeType::Const),
+            "phasor" => Some(NodeType::Phasor),
+            "sphasor" => Some(NodeType::Sphasor),
+            "sr" => Some(NodeType::Sr),
+            "root" => Some(NodeType::Root),
+            "in" => Some(NodeType::In),
+
+            "sin" => Some(NodeType::Sin),
+            "cos" => Some(NodeType::Cos),
+            "tan" => Some(NodeType::Tan),
+            "tanh" => Some(NodeType::Tanh),
+            "asinh" => Some(NodeType::Asinh),
+            "ln" => Some(NodeType::Ln),
+            "log" => Some(NodeType::Log),
+            "log2" => Some(NodeType::Log2),
+            "ceil" => Some(NodeType::Ceil),
+            "floor" => Some(NodeType::Floor),
+            "round" => Some(NodeType::Round),
+            "sqrt" => Some(NodeType::Sqrt),
+            "exp" => Some(NodeType::Exp),
+            "abs" => Some(NodeType::Abs),
+
+            "le" => Some(NodeType::Le),
+            "leq" => Some(NodeType::Leq),
+            "ge" => Some(NodeType::Ge),
+            "geq" => Some(NodeType::Geq),
+            "pow" => Some(NodeType::Pow),
+            "eq" => Some(NodeType::Eq),
+            "and" => Some(NodeType::And),
+            "or" => Some(NodeType::Or),
+
+            "add" => Some(NodeType::Add),
+            "sub" => Some(NodeType::Sub),
+            "mul" => Some(NodeType::Mul),
+            "div" => Some(NodeType::Div),
+            "mod" => Some(NodeType::Mod),
+            "min" => Some(NodeType::Min),
+            "max" => Some(NodeType::Max),
+
+            "seq" => Some(NodeType::Seq),
+            "seq2" => Some(NodeType::Seq2),
+            "sparseq" => Some(NodeType::Sparseq),
+            "sparseq2" => Some(NodeType::Sparseq2),
+            "counter" => Some(NodeType::Counter),
+            "accum" => Some(NodeType::Accum),
+            "latch" => Some(NodeType::Latch),
+            "maxhold" => Some(NodeType::Maxhold),
+            "once" => Some(NodeType::Once),
+
+            "delay" => Some(NodeType::Delay),
+            "sdelay" => Some(NodeType::Sdelay),
+            "z" => Some(NodeType::Z),
+
+            "pole" => Some(NodeType::Pole),
+            "env" => Some(NodeType::Env),
+            "biquad" => Some(NodeType::Biquad),
+            "prewarp" => Some(NodeType::Prewarp),
+            "mm1p" => Some(NodeType::Mm1p),
+            "svf" => Some(NodeType::Svf),
+            "svfshelf" => Some(NodeType::Svfshelf),
+
+            "tapIn" => Some(NodeType::TapIn),
+            "tapOut" => Some(NodeType::TapOut),
+
+            "sample" => Some(NodeType::Sample),
+            "sampleseq" => Some(NodeType::Sampleseq),
+            "sampleseq2" => Some(NodeType::Sampleseq2),
+            "table" => Some(NodeType::Table),
+            "mc.capture" => Some(NodeType::McCaptrue),
+            "mc.sample" => Some(NodeType::McSample),
+            "mc.sampleseq" => Some(NodeType::McSampleseq),
+            "mc.sampleseq2" => Some(NodeType::McSampleseq2),
+            "mc.table" => Some(NodeType::McTable),
+
+            "blepsaw" => Some(NodeType::Blepsaw),
+            "blepsquare" => Some(NodeType::Blepsquare),
+            "bleptriangle" => Some(NodeType::Bleptriangle),
+
+            "meter" => Some(NodeType::Meter),
+            "scope" => Some(NodeType::Scope),
+            "snapshot" => Some(NodeType::Snapshot),
+            "capture" => Some(NodeType::Capture),
+
+            "rand" => Some(NodeType::Rand),
+            _ => None,
+        }
+    }
+
+    /// Get the string representation of this node type for the C++ runtime.
     pub fn as_str(&self) -> &'static str {
         match self {
             NodeType::Const => "const",
@@ -324,6 +415,10 @@ impl From<&[f32]> for PropertyValue {
 pub struct InstructionBatch {
     ptr: *mut ffi::ElemBatch,
 }
+
+// SAFETY: InstructionBatch owns its ElemBatch and is not used concurrently.
+// It is only transferred between threads (UI -> audio), never shared.
+unsafe impl Send for InstructionBatch {}
 
 impl InstructionBatch {
     pub fn new() -> Self {
