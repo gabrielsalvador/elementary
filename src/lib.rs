@@ -434,7 +434,8 @@ impl InstructionBatch {
 
     /// Create a new node with the given id and type.
     pub fn create_node(&mut self, node_id: i32, node_type: NodeType) {
-        let c_type = CString::new(node_type.as_str()).expect("node_type.as_str() must not contain null bytes");
+        let c_type = CString::new(node_type.as_str())
+            .expect("node_type.as_str() must not contain null bytes");
         unsafe { ffi::elem_batch_create_node(self.ptr, node_id, c_type.as_ptr()) }
     }
 
@@ -457,12 +458,7 @@ impl InstructionBatch {
                 }
             }
             PropertyValue::Bool(v) => unsafe {
-                ffi::elem_batch_set_property_bool(
-                    self.ptr,
-                    node_id,
-                    c_key.as_ptr(),
-                    v as i32,
-                );
+                ffi::elem_batch_set_property_bool(self.ptr, node_id, c_key.as_ptr(), v as i32);
             },
             PropertyValue::FloatArray(v) => unsafe {
                 ffi::elem_batch_set_property_float_array(
@@ -474,6 +470,17 @@ impl InstructionBatch {
                 );
             },
         }
+    }
+
+    /// Set a sequence property by interleaving parallel time and value arrays
+    /// into a single float array: `[t0, v0, t1, v1, ...]`.
+    pub fn set_property_seq(&mut self, node_id: i32, key: &str, times: &[f64], values: &[f64]) {
+        let interleaved: Vec<f32> = times
+            .iter()
+            .zip(values.iter())
+            .flat_map(|(&t, &v)| [t as f32, v as f32])
+            .collect();
+        self.set_property(node_id, key, interleaved);
     }
 
     /// Wire a child node's output to a parent node's next inlet.
@@ -539,12 +546,7 @@ impl Runtime {
     ///
     /// `input` and `output` are slices of channel buffers. Each channel buffer
     /// must be at least `num_samples` long.
-    pub fn process(
-        &mut self,
-        input: &[&[f32]],
-        output: &mut [&mut [f32]],
-        num_samples: usize,
-    ) {
+    pub fn process(&mut self, input: &[&[f32]], output: &mut [&mut [f32]], num_samples: usize) {
         let input_ptrs: Vec<*const f32> = input.iter().map(|ch| ch.as_ptr()).collect();
         let mut output_ptrs: Vec<*mut f32> = output.iter_mut().map(|ch| ch.as_mut_ptr()).collect();
 
@@ -622,8 +624,7 @@ impl Runtime {
     /// Garbage-collect unreferenced nodes. Returns the pruned node ids.
     pub fn gc(&mut self) -> Vec<i32> {
         let mut buf = vec![0i32; 4096];
-        let count =
-            unsafe { ffi::elem_runtime_gc(self.ptr, buf.as_mut_ptr(), buf.len()) };
+        let count = unsafe { ffi::elem_runtime_gc(self.ptr, buf.as_mut_ptr(), buf.len()) };
         buf.truncate(count);
         buf
     }
@@ -765,11 +766,7 @@ mod tests {
 
         // After fade-in, output should be near 0.5
         let last = *out_l.last().unwrap();
-        assert!(
-            (last - 0.5).abs() < 0.01,
-            "expected ~0.5, got {}",
-            last
-        );
+        assert!((last - 0.5).abs() < 0.01, "expected ~0.5, got {}", last);
     }
 
     #[test]
