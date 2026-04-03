@@ -194,6 +194,32 @@ void elem_batch_set_property_float_array(
     });
 }
 
+void elem_batch_set_property_seq(
+    ElemBatch* batch,
+    int32_t node_id,
+    const char* key,
+    const double* times,
+    const double* values,
+    size_t len)
+{
+    elem::Array arr;
+    arr.reserve(len);
+
+    for (size_t i = 0; i < len; ++i) {
+        elem::Object obj;
+        obj["time"] = elem::Value(times[i]);
+        obj["value"] = elem::Value(values[i]);
+        arr.push_back(elem::Value(std::move(obj)));
+    }
+
+    batch->instructions.push_back(elem::Array {
+        elem::Value(3.0),
+        elem::Value(static_cast<double>(node_id)),
+        elem::Value(std::string(key)),
+        elem::Value(std::move(arr)),
+    });
+}
+
 void elem_batch_append_child(ElemBatch* batch, int32_t parent_id, int32_t child_id, int32_t output_channel)
 {
     batch->instructions.push_back(elem::Array {

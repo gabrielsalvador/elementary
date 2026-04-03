@@ -11,8 +11,11 @@ pub struct ElemBatch {
     _private: [u8; 0],
 }
 
-pub type ElemEventCallback =
-    unsafe extern "C" fn(event_type: *const c_char, value_json: *const c_char, user_data: *mut c_void);
+pub type ElemEventCallback = unsafe extern "C" fn(
+    event_type: *const c_char,
+    value_json: *const c_char,
+    user_data: *mut c_void,
+);
 
 extern "C" {
     // Runtime lifecycle
@@ -35,11 +38,7 @@ extern "C" {
     pub fn elem_batch_free(batch: *mut ElemBatch);
     pub fn elem_batch_clear(batch: *mut ElemBatch);
 
-    pub fn elem_batch_create_node(
-        batch: *mut ElemBatch,
-        node_id: i32,
-        node_type: *const c_char,
-    );
+    pub fn elem_batch_create_node(batch: *mut ElemBatch, node_id: i32, node_type: *const c_char);
 
     pub fn elem_batch_set_property_number(
         batch: *mut ElemBatch,
@@ -70,6 +69,15 @@ extern "C" {
         len: usize,
     );
 
+    pub fn elem_batch_set_property_seq(
+        batch: *mut ElemBatch,
+        node_id: i32,
+        key: *const c_char,
+        times: *const f64,
+        values: *const f64,
+        len: usize,
+    );
+
     pub fn elem_batch_append_child(
         batch: *mut ElemBatch,
         parent_id: i32,
@@ -77,18 +85,11 @@ extern "C" {
         output_channel: i32,
     );
 
-    pub fn elem_batch_activate_roots(
-        batch: *mut ElemBatch,
-        root_ids: *const i32,
-        count: usize,
-    );
+    pub fn elem_batch_activate_roots(batch: *mut ElemBatch, root_ids: *const i32, count: usize);
 
     pub fn elem_batch_commit(batch: *mut ElemBatch);
 
-    pub fn elem_runtime_apply_instructions(
-        rt: *mut ElemRuntime,
-        batch: *const ElemBatch,
-    ) -> c_int;
+    pub fn elem_runtime_apply_instructions(rt: *mut ElemRuntime, batch: *const ElemBatch) -> c_int;
 
     // Events
     pub fn elem_runtime_process_queued_events(
@@ -99,11 +100,7 @@ extern "C" {
 
     // State
     pub fn elem_runtime_reset(rt: *mut ElemRuntime);
-    pub fn elem_runtime_gc(
-        rt: *mut ElemRuntime,
-        out_ids: *mut i32,
-        max_ids: usize,
-    ) -> usize;
+    pub fn elem_runtime_gc(rt: *mut ElemRuntime, out_ids: *mut i32, max_ids: usize) -> usize;
 
     // Shared resources
     pub fn elem_runtime_add_shared_resource(

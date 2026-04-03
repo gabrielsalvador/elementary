@@ -472,15 +472,21 @@ impl InstructionBatch {
         }
     }
 
-    /// Set a sequence property by interleaving parallel time and value arrays
-    /// into a single float array: `[t0, v0, t1, v1, ...]`.
+    /// Set a sequence property as an array of `{time, value}` objects.
+    /// Used by sparseq2 and similar nodes that expect structured events.
     pub fn set_property_seq(&mut self, node_id: i32, key: &str, times: &[f64], values: &[f64]) {
-        let interleaved: Vec<f32> = times
-            .iter()
-            .zip(values.iter())
-            .flat_map(|(&t, &v)| [t as f32, v as f32])
-            .collect();
-        self.set_property(node_id, key, interleaved);
+        let c_key = CString::new(key).expect("key must not contain null bytes");
+        let len = times.len().min(values.len());
+        unsafe {
+            ffi::elem_batch_set_property_seq(
+                self.ptr,
+                node_id,
+                c_key.as_ptr(),
+                times.as_ptr(),
+                values.as_ptr(),
+                len,
+            );
+        }
     }
 
     /// Wire a child node's output to a parent node's next inlet.
