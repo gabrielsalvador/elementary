@@ -1,8 +1,8 @@
 [package]
 name = "elementary"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "Rust bindings for the Elementary Audio runtime"
+description = "A pure-Rust port of the Elementary Audio runtime"
+license = "MIT"
 
-[build-dependencies]
-cc = "1"
+[dependencies]
