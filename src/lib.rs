@@ -36,6 +36,7 @@ mod value;
 use std::fmt;
 
 pub use node::{BlockContext, Node, NodeId, NodeInfo};
+pub use nodes::analyzers::MeterReadout;
 pub use resources::{SharedResource, SharedResourceMap, SharedResourcePtr};
 pub use runtime::Runtime;
 pub use value::Value;

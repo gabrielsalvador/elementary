@@ -4,6 +4,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 use crate::node::{BlockContext, Node, NodeId, NodeInfo, Props};
+use crate::nodes::analyzers::MeterReadout;
 use crate::nodes::create_node;
 use crate::resources::{SharedResource, SharedResourceMap};
 use crate::value::Value;
@@ -455,6 +456,25 @@ impl Runtime {
                     value.write_json(&mut json);
                     callback(event_type, &json);
                 });
+            }
+        }
+    }
+
+    /// Hand every `meter` node's latest readout to `f`, with the node's `name`
+    /// property. Unlike [`process_queued_events`](Self::process_queued_events)
+    /// this never allocates, so it is safe in the audio callback; readouts
+    /// taken here are not emitted as events.
+    pub fn read_meters<F: FnMut(Option<&Value>, MeterReadout)>(&mut self, mut f: F) {
+        let Some(seq) = &self.sequence else { return };
+        for rs in &seq.roots {
+            for op in &rs.ops {
+                let Some(entry) = self.nodes.get_mut(&op.node) else { continue };
+                let Some(meter) = entry.node.as_meter() else { continue };
+                // Nodes shared between roots appear in each root's ops; the
+                // first visit takes the readout.
+                if let Some(readout) = meter.take_readout() {
+                    f(entry.props.get("name"), readout);
+                }
             }
         }
     }

@@ -11,11 +11,12 @@ use crate::Error;
 
 //==============================================================================
 
-#[derive(Clone, Copy)]
-struct MeterReadout {
-    min: f32,
-    max: f32,
-    rms: f32,
+/// One block's worth of `meter` analysis.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct MeterReadout {
+    pub min: f32,
+    pub max: f32,
+    pub rms: f32,
 }
 
 /// `meter`: per-block min / max / rms.
@@ -27,6 +28,12 @@ pub struct MeterNode {
 impl MeterNode {
     pub fn new(_: NodeInfo) -> Self {
         Self::default()
+    }
+
+    /// Take the latest readout, if a block has run since the last take.
+    /// Taking it here means `process_events` won't also emit it.
+    pub fn take_readout(&mut self) -> Option<MeterReadout> {
+        self.readout.take()
     }
 }
 
@@ -67,6 +74,10 @@ impl Node for MeterNode {
                 ]),
             );
         }
+    }
+
+    fn as_meter(&mut self) -> Option<&mut MeterNode> {
+        Some(self)
     }
 }
 

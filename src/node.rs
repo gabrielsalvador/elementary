@@ -139,6 +139,10 @@ pub trait Node: Send {
     fn as_tap_out(&mut self) -> Option<&mut crate::nodes::feedback::TapOutNode> {
         None
     }
+
+    fn as_meter(&mut self) -> Option<&mut crate::nodes::analyzers::MeterNode> {
+        None
+    }
 }
 
 /// Look up the `name` property, used as the `source` of analysis events.
