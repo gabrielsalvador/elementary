@@ -429,3 +429,35 @@ fn runtime_is_send() {
     assert_send::<Runtime>();
     assert_send::<InstructionBatch>();
 }
+
+#[test]
+fn slew_starts_at_its_input_then_ramps_at_its_rate() {
+    let mut rt = Runtime::new(48000.0, 256);
+    let mut b = InstructionBatch::new();
+    b.create_node(1, NodeType::Const);
+    b.set_property(1, "value", 100.0);
+    b.create_node(2, NodeType::Const);
+    b.set_property(2, "value", 0.5);
+    b.create_node(3, NodeType::Slew);
+    b.append_child(3, 2, 0);
+    b.append_child(3, 1, 0);
+    b.create_node(4, NodeType::Root);
+    b.set_property(4, "channel", 0.0);
+    b.append_child(4, 3, 0);
+    b.activate_roots(&[4]);
+    b.commit();
+    rt.apply_instructions(&b).unwrap();
+    // Past the root's fade-in.
+    let (l, _) = render(&mut rt, 20, 256);
+    assert!(l.iter().all(|&s| s == 100.0), "no ramp up from zero");
+
+    let mut b = InstructionBatch::new();
+    b.set_property(1, "value", 0.0);
+    b.commit();
+    rt.apply_instructions(&b).unwrap();
+    let (l, _) = render(&mut rt, 1, 256);
+    assert_eq!(l[0], 99.5);
+    assert_eq!(l[99], 50.0);
+    assert_eq!(l[199], 0.0, "reaches the target");
+    assert_eq!(l[255], 0.0, "and stays there");
+}

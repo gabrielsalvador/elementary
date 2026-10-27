@@ -80,6 +80,7 @@ pub fn create_node(type_name: &str, info: NodeInfo) -> Option<Box<dyn Node>> {
 
         // Filters
         "pole" => Box::new(filters::OnePoleNode::new(info)),
+        "slew" => Box::new(filters::SlewNode::new(info)),
         "env" => Box::new(filters::EnvelopeNode::new(info)),
         "biquad" => Box::new(filters::BiquadNode::new(info)),
         "prewarp" => Box::new(filters::PrewarpNode::new(info)),

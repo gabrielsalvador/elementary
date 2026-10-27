@@ -141,6 +141,7 @@ pub enum NodeType {
 
     // Filters
     Pole,
+    Slew,
     Env,
     Biquad,
     Prewarp,
@@ -179,7 +180,7 @@ pub enum NodeType {
 }
 
 impl NodeType {
-    pub const ALL: [NodeType; 73] = [
+    pub const ALL: [NodeType; 74] = [
         NodeType::Const,
         NodeType::Phasor,
         NodeType::Sphasor,
@@ -228,6 +229,7 @@ impl NodeType {
         NodeType::Sdelay,
         NodeType::Z,
         NodeType::Pole,
+        NodeType::Slew,
         NodeType::Env,
         NodeType::Biquad,
         NodeType::Prewarp,
@@ -318,6 +320,7 @@ impl NodeType {
             NodeType::Z => "z",
 
             NodeType::Pole => "pole",
+            NodeType::Slew => "slew",
             NodeType::Env => "env",
             NodeType::Biquad => "biquad",
             NodeType::Prewarp => "prewarp",

@@ -1,4 +1,4 @@
-//! One-pole, envelope follower, biquad, prewarp, multimode one-pole, SVF, SVF shelf.
+//! One-pole, slew limiter, envelope follower, biquad, prewarp, multimode one-pole, SVF, SVF shelf.
 
 use crate::node::{expect_string, BlockContext, Node, NodeInfo};
 use crate::resources::SharedResourceMap;
@@ -30,6 +30,43 @@ impl Node for OnePoleNode {
             self.z = x[i] + p[i] * self.z;
             out[i] = self.z;
         }
+    }
+}
+
+/// `slew`: inputs [max step, signal]. Follows the signal but moves at most
+/// `max step` per sample, so a jump becomes a ramp. Starts at the signal's
+/// first value rather than ramping up from zero.
+#[derive(Default)]
+pub struct SlewNode {
+    z: Option<f32>,
+}
+
+impl SlewNode {
+    pub fn new(_: NodeInfo) -> Self {
+        Self::default()
+    }
+}
+
+impl Node for SlewNode {
+    fn process(&mut self, ctx: &mut BlockContext<'_>) {
+        let out = ctx.output(0);
+        if ctx.num_inputs() < 2 {
+            out.fill(0.0);
+            return;
+        }
+        let step = ctx.input(0);
+        let x = ctx.input(1);
+        for i in 0..ctx.num_samples {
+            let z = self.z.unwrap_or(x[i]);
+            let max = step[i].abs();
+            let y = z + (x[i] - z).clamp(-max, max);
+            self.z = Some(y);
+            out[i] = y;
+        }
+    }
+
+    fn reset(&mut self) {
+        self.z = None;
     }
 }
 
