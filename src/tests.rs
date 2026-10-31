@@ -461,3 +461,37 @@ fn slew_starts_at_its_input_then_ramps_at_its_rate() {
     assert_eq!(l[199], 0.0, "reaches the target");
     assert_eq!(l[255], 0.0, "and stays there");
 }
+
+#[test]
+fn meter_readout_covers_every_block_until_taken() {
+    let mut rt = Runtime::new(48000.0, 64);
+    let mut b = InstructionBatch::new();
+    // An impulse train pulsing every 200 samples, when its phasor wraps.
+    b.create_node(1, NodeType::Const);
+    b.set_property(1, "value", 240.0);
+    b.create_node(2, NodeType::Phasor);
+    b.append_child(2, 1, 0);
+    b.create_node(3, NodeType::Z);
+    b.append_child(3, 2, 0);
+    b.create_node(4, NodeType::Ge);
+    b.append_child(4, 3, 0);
+    b.append_child(4, 2, 0);
+    b.create_node(5, NodeType::Meter);
+    b.append_child(5, 4, 0);
+    b.create_node(6, NodeType::Root);
+    b.set_property(6, "channel", 0.0);
+    b.append_child(6, 5, 0);
+    b.activate_roots(&[6]);
+    b.commit();
+    rt.apply_instructions(&b).unwrap();
+
+    // 512 samples in 64-sample blocks: pulses near samples 200 and 400, and
+    // the silent last block (448..512) mustn't overwrite them.
+    render(&mut rt, 1, 512);
+    let mut maxes = Vec::new();
+    rt.read_meters(|_, r| maxes.push(r.max));
+    assert_eq!(maxes, vec![1.0]);
+
+    rt.read_meters(|_, r| maxes.push(r.max));
+    assert_eq!(maxes.len(), 1, "taking empties it");
+}

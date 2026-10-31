@@ -19,7 +19,8 @@ pub struct MeterReadout {
     pub rms: f32,
 }
 
-/// `meter`: per-block min / max / rms.
+/// `meter`: min / max / rms over the blocks since its readout was last
+/// taken (rms of the loudest block).
 #[derive(Default)]
 pub struct MeterNode {
     readout: Option<MeterReadout>,
@@ -30,8 +31,8 @@ impl MeterNode {
         Self::default()
     }
 
-    /// Take the latest readout, if a block has run since the last take.
-    /// Taking it here means `process_events` won't also emit it.
+    /// Take the readout covering every block since the last take, if any
+    /// ran. Taking it here means `process_events` won't also emit it.
     pub fn take_readout(&mut self) -> Option<MeterReadout> {
         self.readout.take()
     }
@@ -59,7 +60,16 @@ impl Node for MeterNode {
             max = 0.0;
         }
         let rms = (sum_squares / input.len().max(1) as f32).sqrt();
-        self.readout = Some(MeterReadout { min, max, rms });
+        // Fold into an untaken readout so a short peak in an earlier block
+        // isn't overwritten; rms keeps the loudest block's.
+        self.readout = Some(match self.readout {
+            Some(r) => MeterReadout {
+                min: r.min.min(min),
+                max: r.max.max(max),
+                rms: r.rms.max(rms),
+            },
+            None => MeterReadout { min, max, rms },
+        });
     }
 
     fn process_events(&mut self, props: &Props, emit: &mut dyn FnMut(&str, Value)) {
