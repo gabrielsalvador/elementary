@@ -12,11 +12,37 @@ pub mod sample;
 pub mod sampleseq;
 pub mod sparseq;
 
+use std::sync::RwLock;
+
 use crate::node::{Node, NodeInfo};
 
 use self::oscillators::BlepMode;
 
-/// Instantiate a builtin node by its type name. Returns `None` for unknown types.
+/// Builds a node of a type registered with [`register_node_type`].
+pub type NodeConstructor = fn(NodeInfo) -> Box<dyn Node>;
+
+/// Node types added from outside the crate, looked up after the builtins.
+static REGISTERED: RwLock<Vec<(&'static str, NodeConstructor)>> = RwLock::new(Vec::new());
+
+/// Make `type_name` available to every runtime, built by `constructor`.
+/// Registering a name again replaces its constructor; builtin names can't
+/// be overridden.
+pub fn register_node_type(type_name: &'static str, constructor: NodeConstructor) {
+    let mut registered = REGISTERED.write().unwrap_or_else(|e| e.into_inner());
+    match registered.iter_mut().find(|(name, _)| *name == type_name) {
+        Some(entry) => entry.1 = constructor,
+        None => registered.push((type_name, constructor)),
+    }
+}
+
+fn create_registered(type_name: &str, info: NodeInfo) -> Option<Box<dyn Node>> {
+    let registered = REGISTERED.read().unwrap_or_else(|e| e.into_inner());
+    let (_, constructor) = registered.iter().find(|(name, _)| *name == type_name)?;
+    Some(constructor(info))
+}
+
+/// Instantiate a node by its type name: a builtin, else one registered with
+/// [`register_node_type`]. Returns `None` for unknown types.
 pub fn create_node(type_name: &str, info: NodeInfo) -> Option<Box<dyn Node>> {
     use math::{BinaryNode as Bin, ReducingNode as Red, UnaryNode as Un};
 
@@ -117,7 +143,7 @@ pub fn create_node(type_name: &str, info: NodeInfo) -> Option<Box<dyn Node>> {
         // Noise
         "rand" => Box::new(noise::RandNode::new(info)),
 
-        _ => return None,
+        _ => return create_registered(type_name, info),
     };
     Some(node)
 }
