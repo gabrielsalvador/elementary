@@ -29,15 +29,17 @@
 
 mod node;
 mod nodes;
+mod reconcile;
 mod resources;
 mod runtime;
 mod value;
 
 use std::fmt;
 
-pub use node::{BlockContext, Node, NodeId, NodeInfo};
+pub use node::{BlockContext, Node, NodeId, NodeInfo, Props};
 pub use nodes::analyzers::MeterReadout;
 pub use nodes::{register_node_type, NodeConstructor};
+pub use reconcile::{hash_node, mix, Graph, NodeRepr, Renderer, KEY_BIT};
 pub use resources::{SharedResource, SharedResourceMap, SharedResourcePtr};
 pub use runtime::Runtime;
 pub use value::Value;
@@ -432,6 +434,18 @@ impl From<PropertyValue> for Value {
     }
 }
 
+/// A sequence property as an array of `{time, value}` objects, as `sparseq2`, `sampleseq`
+/// and friends consume.
+pub fn seq_events(times: &[f64], values: &[f64]) -> Value {
+    Value::Array(
+        times
+            .iter()
+            .zip(values)
+            .map(|(&t, &v)| Value::object([("time", Value::Number(t)), ("value", Value::Number(v))]))
+            .collect(),
+    )
+}
+
 //==============================================================================
 // InstructionBatch
 
@@ -472,6 +486,11 @@ impl InstructionBatch {
         &self.instructions
     }
 
+    /// Keeps the instructions `keep` says to.
+    pub fn retain(&mut self, keep: impl FnMut(&Instruction) -> bool) {
+        self.instructions.retain(keep);
+    }
+
     /// Create a new node with the given id and type.
     pub fn create_node(&mut self, node_id: NodeId, node_type: NodeType) {
         self.create_node_named(node_id, node_type.as_str());
@@ -497,12 +516,7 @@ impl InstructionBatch {
     /// Set a sequence property as an array of `{time, value}` objects, as
     /// consumed by `sparseq2`, `sampleseq` and friends.
     pub fn set_property_seq(&mut self, node_id: NodeId, key: &str, times: &[f64], values: &[f64]) {
-        let events: Vec<Value> = times
-            .iter()
-            .zip(values)
-            .map(|(&t, &v)| Value::object([("time", Value::Number(t)), ("value", Value::Number(v))]))
-            .collect();
-        self.set_property(node_id, key, Value::Array(events));
+        self.set_property(node_id, key, seq_events(times, values));
     }
 
     /// Set a `sparseq` sequence as an array of `{tickTime, value}` objects.

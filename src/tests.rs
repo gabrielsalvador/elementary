@@ -47,7 +47,7 @@ fn unknown_type_and_duplicate_ids() {
     assert_eq!(rt.apply_instructions(&b), Err(Error::UnknownNodeType));
     let mut b = InstructionBatch::new();
     b.create_node(1, NodeType::Const);
-    b.create_node(1, NodeType::Const);
+    b.create_node(1, NodeType::Phasor);
     assert_eq!(rt.apply_instructions(&b), Err(Error::NodeAlreadyExists));
     let mut b = InstructionBatch::new();
     b.set_property(99, "value", 1.0);

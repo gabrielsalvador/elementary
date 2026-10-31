@@ -130,8 +130,20 @@ impl Runtime {
 
     fn create_node(&mut self, id: NodeId, type_name: &str) -> Result<(), Error> {
         let node = create_node(type_name, self.info).ok_or(Error::UnknownNodeType)?;
-        if self.nodes.contains_key(&id) {
-            return Err(Error::NodeAlreadyExists);
+        if let Some(entry) = self.nodes.get_mut(&id) {
+            if entry.type_name != type_name {
+                return Err(Error::NodeAlreadyExists);
+            }
+            // A renderer creating a node of the same type again, one it forgot while this
+            // runtime kept it under a fading root, or one keyed to live on while its inputs
+            // move: the node and its state stay, and the batch wires it afresh.
+            let inlets = std::mem::take(&mut entry.inlets);
+            for inlet in inlets {
+                if let Some(child) = self.nodes.get_mut(&inlet.source) {
+                    child.outlets.retain(|o| o.destination != id);
+                }
+            }
+            return Ok(());
         }
         self.nodes.insert(
             id,
