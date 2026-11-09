@@ -203,7 +203,7 @@ impl Runtime {
                 entry.node.set_property("active", &Value::Bool(false), &mut self.resources)?;
                 entry.props.insert("active".into(), Value::Bool(false));
             }
-            if entry.node.as_root().map(|r| r.still_running()).unwrap_or(false) {
+            if entry.node.as_root().is_some_and(|r| r.still_running()) {
                 active.insert(id);
             }
         }
@@ -260,7 +260,7 @@ impl Runtime {
         let mut live_nodes = HashSet::new();
 
         for root_id in sorted_roots {
-            let active = self.nodes[&root_id].node.as_root().map(|r| r.active()).unwrap_or(false);
+            let active = self.nodes[&root_id].node.as_root().is_some_and(|r| r.active());
             let mut order = Vec::new();
             self.traverse(&mut visited, &mut order, root_id);
 
@@ -427,8 +427,7 @@ impl Runtime {
             let active = nodes
                 .get(&rs.root)
                 .and_then(|e| e.node.as_root())
-                .map(|r| r.active())
-                .unwrap_or(false);
+                .is_some_and(|r| r.active());
             if !active {
                 continue;
             }
@@ -455,8 +454,7 @@ impl Runtime {
                 .nodes
                 .get(&rs.root)
                 .and_then(|e| e.node.as_root())
-                .map(|r| r.active())
-                .unwrap_or(false);
+                .is_some_and(|r| r.active());
             if !active {
                 continue;
             }

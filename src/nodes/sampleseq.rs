@@ -114,7 +114,7 @@ struct BufferReader {
 impl BufferReader {
     fn engage(&mut self, start: f64, current_time: f64, source: SharedResourcePtr) {
         self.start_time = start;
-        self.buffer_size = source.channel(0).map(|c| c.len()).unwrap_or(0);
+        self.buffer_size = source.channel(0).map_or(0, |c| c.len());
         self.source = Some(source);
         self.fade.set_target(1.0);
         self.position = position_for(start, current_time, self.sample_duration, self.buffer_size);
@@ -261,7 +261,7 @@ impl Node for SampleSeqNode {
             self.next_event = None;
         }
         let valid = ctx.num_inputs() >= 1
-            && self.seq.as_ref().map(|s| !s.is_empty()).unwrap_or(false)
+            && self.seq.as_ref().is_some_and(|s| !s.is_empty())
             && self.buffer.is_some()
             && dur > 0.0;
         if !valid {
@@ -271,8 +271,8 @@ impl Node for SampleSeqNode {
         let t = ctx.input(0)[0] as f64;
         let seq = self.seq.as_ref().unwrap();
         let should_update = (self.prev_event.is_none() && self.next_event.is_none())
-            || self.prev_event.map(|p| t <= seq[p].0 + 1e-6).unwrap_or(false)
-            || self.next_event.map(|n| t >= seq[n].0 - 1e-6).unwrap_or(false);
+            || self.prev_event.is_some_and(|p| t <= seq[p].0 + 1e-6)
+            || self.next_event.is_some_and(|n| t >= seq[n].0 - 1e-6);
         if should_update || !self.readers[self.active_reader].is_aligned_with_time(t) {
             self.update_event_boundaries(t);
         }
@@ -330,12 +330,9 @@ impl McBufferReader {
             let Some(data) = source.channel(ch) else { continue };
             local_fade = self.fade;
             let out = ctx.output(ch);
-            for i in 0..num_samples {
-                let p = self.position + i;
-                if p >= data.len() {
-                    break;
-                }
-                out[i] += local_fade.tick(data[p]);
+            let from = self.position.min(data.len());
+            for (o, &x) in out[..num_samples].iter_mut().zip(&data[from..]) {
+                *o += local_fade.tick(x);
             }
         }
         self.fade = local_fade;
@@ -451,8 +448,8 @@ impl Node for McSampleSeqNode {
         let t = ctx.input(0)[0] as f64;
         let seq = self.seq.as_ref().unwrap();
         let should_update = (self.prev_event.is_none() && self.next_event.is_none())
-            || self.prev_event.map(|p| t <= seq[p].0 + 1e-6).unwrap_or(false)
-            || self.next_event.map(|n| t >= seq[n].0 - 1e-6).unwrap_or(false);
+            || self.prev_event.is_some_and(|p| t <= seq[p].0 + 1e-6)
+            || self.next_event.is_some_and(|n| t >= seq[n].0 - 1e-6);
         if should_update || !self.readers[self.active_reader].is_aligned_with_time(t) {
             self.update_event_boundaries(t);
         }

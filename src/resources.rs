@@ -40,7 +40,7 @@ impl SharedResource {
 
     pub fn num_samples(&self) -> usize {
         match self {
-            SharedResource::Audio { channels } => channels.first().map(|c| c.len()).unwrap_or(0),
+            SharedResource::Audio { channels } => channels.first().map_or(0, |c| c.len()),
             SharedResource::Tap(buf) => buf.lock().map(|b| b.len()).unwrap_or(0),
         }
     }

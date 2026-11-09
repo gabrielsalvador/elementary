@@ -177,7 +177,7 @@ impl Node for SampleNode {
         };
         for i in 0..ctx.num_samples {
             let cv = self.change.tick(trig[i]);
-            let step = rate.map(|r| r[i]).unwrap_or(1.0);
+            let step = rate.map_or(1.0, |r| r[i]);
             if cv > 0.5 {
                 self.readers[self.current_reader & 1].note_off();
                 self.current_reader += 1;
@@ -304,6 +304,13 @@ impl McSampleNode {
             sample_rate: info.sample_rate,
         }
     }
+
+    // Both readers, the one fading out and the one playing, summed into the outputs.
+    fn sum_readers(&mut self, ctx: &BlockContext<'_>, write_offset: usize, num_samples: usize, rate: f64) {
+        for reader in &mut self.readers {
+            reader.sum_into(ctx, write_offset, num_samples, rate);
+        }
+    }
 }
 
 impl Node for McSampleNode {
@@ -339,25 +346,22 @@ impl Node for McSampleNode {
         let trig = ctx.input(0);
         let mut i = 0usize;
         let n = ctx.num_samples;
-        for j in 0..n {
-            let cv = self.change.tick(trig[j]);
+        for (j, &t) in trig[..n].iter().enumerate() {
+            let cv = self.change.tick(t);
             if cv > 0.5 {
-                self.readers[0].sum_into(ctx, i, j - i, rate);
-                self.readers[1].sum_into(ctx, i, j - i, rate);
+                self.sum_readers(ctx, i, j - i, rate);
                 self.readers[self.current_reader & 1].note_off();
                 self.current_reader += 1;
                 self.readers[self.current_reader & 1].note_on(self.start_offset, self.stop_offset, wants_loop);
                 i = j;
             }
             if cv < -0.5 && self.mode != PlayMode::Trigger {
-                self.readers[0].sum_into(ctx, i, j - i, rate);
-                self.readers[1].sum_into(ctx, i, j - i, rate);
+                self.sum_readers(ctx, i, j - i, rate);
                 self.readers[self.current_reader & 1].note_off();
                 i = j;
             }
         }
-        self.readers[0].sum_into(ctx, i, n - i, rate);
-        self.readers[1].sum_into(ctx, i, n - i, rate);
+        self.sum_readers(ctx, i, n - i, rate);
     }
 }
 

@@ -495,3 +495,24 @@ fn meter_readout_covers_every_block_until_taken() {
     rt.read_meters(|_, r| maxes.push(r.max));
     assert_eq!(maxes.len(), 1, "taking empties it");
 }
+
+#[test]
+fn sample_delay_holds_back_by_its_size() {
+    let mut rt = Runtime::new(44100.0, 8);
+    let mut b = InstructionBatch::new();
+    b.create_node(1, NodeType::Const);
+    b.set_property(1, "value", 1.0);
+    b.create_node(2, NodeType::Sdelay);
+    b.set_property(2, "size", 5.0);
+    b.append_child(2, 1, 0);
+    b.create_node(3, NodeType::Root);
+    b.set_property(3, "channel", 0.0);
+    b.append_child(3, 2, 0);
+    b.activate_roots(&[3]);
+    b.commit();
+    rt.apply_instructions(&b).unwrap();
+    // The root fades in, so the delayed signal shows as the first samples above zero.
+    let (l, _) = render(&mut rt, 1, 8);
+    assert!(l[..5].iter().all(|&s| s == 0.), "five samples late: {l:?}");
+    assert!(l[5..].iter().all(|&s| s > 0.), "then through: {l:?}");
+}

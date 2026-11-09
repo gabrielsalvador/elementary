@@ -333,10 +333,8 @@ impl MultiChannelRingBuffer {
         } else {
             r
         };
-        let n = self.buffers.len().min(data.len());
-        for i in 0..n {
-            let src = &data[i][read_offset..read_offset + num_samples];
-            let buf = &mut self.buffers[i];
+        for (buf, src) in self.buffers.iter_mut().zip(data) {
+            let src = &src[read_offset..read_offset + num_samples];
             if w + num_samples >= self.capacity {
                 let s1 = self.capacity - w;
                 buf[w..].copy_from_slice(&src[..s1]);
@@ -357,10 +355,8 @@ impl MultiChannelRingBuffer {
         if self.num_full_slots(r, w) < num_samples {
             return false;
         }
-        let n = self.buffers.len().min(dest.len());
-        for i in 0..n {
-            let buf = &self.buffers[i];
-            let out = &mut dest[i][..num_samples];
+        for (buf, out) in self.buffers.iter().zip(dest.iter_mut()) {
+            let out = &mut out[..num_samples];
             if r + num_samples >= self.capacity {
                 let s1 = self.capacity - r;
                 out[..s1].copy_from_slice(&buf[r..]);

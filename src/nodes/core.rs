@@ -461,7 +461,7 @@ impl Node for SequenceNode {
         let len = seq.len();
         for i in 0..ctx.num_samples {
             let x = input[i];
-            let r = reset.map(|r| r[i]).unwrap_or(0.0);
+            let r = reset.map_or(0.0, |r| r[i]);
             if self.reset_change.tick(r) > 0.5 {
                 self.index = self.offset;
             }
@@ -550,7 +550,7 @@ impl Node for Seq2Node {
         let len = seq.len();
         for i in 0..ctx.num_samples {
             let x = input[i];
-            let r = reset.map(|r| r[i]).unwrap_or(0.0);
+            let r = reset.map_or(0.0, |r| r[i]);
             if self.change.tick(x) > 0.5 {
                 self.edge_count += 1;
             }

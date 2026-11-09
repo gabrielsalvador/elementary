@@ -160,13 +160,13 @@ impl Node for SampleDelayNode {
         let mask = size - 1;
         let input = ctx.input(0);
         let read_start = self.write_index as i64 - self.length as i64;
-        for i in 0..ctx.num_samples {
-            self.buffer[self.write_index] = input[i];
+        for &x in &input[..ctx.num_samples] {
+            self.buffer[self.write_index] = x;
             self.write_index = (self.write_index + 1) & mask;
         }
-        for i in 0..ctx.num_samples {
+        for (i, o) in out[..ctx.num_samples].iter_mut().enumerate() {
             let idx = (size as i64 + read_start + i as i64) as usize & mask;
-            out[i] = self.buffer[idx];
+            *o = self.buffer[idx];
         }
     }
 }

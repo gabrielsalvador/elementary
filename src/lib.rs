@@ -25,7 +25,6 @@
 //! ```
 
 // Sample loops index several parallel buffers by position; iterators would obscure them.
-#![allow(clippy::needless_range_loop)]
 
 mod node;
 mod nodes;

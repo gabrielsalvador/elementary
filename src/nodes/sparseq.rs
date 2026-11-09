@@ -203,7 +203,7 @@ impl Node for SparSeqNode {
 
         for i in 0..ctx.num_samples {
             self.samples_since_edge += 1;
-            let r = reset.map(|r| r[i]).unwrap_or(0.0);
+            let r = reset.map_or(0.0, |r| r[i]);
             let is_trigger = self.change.tick(clock[i]) > 0.5;
             let is_reset = self.reset_change.tick(r) > 0.5;
             if is_reset {
@@ -291,7 +291,7 @@ impl Node for SparSeq2Node {
             self.prev_event = None;
             self.next_event = None;
         }
-        let valid = ctx.num_inputs() >= 1 && self.seq.as_ref().map(|s| !s.is_empty()).unwrap_or(false);
+        let valid = ctx.num_inputs() >= 1 && self.seq.as_ref().is_some_and(|s| !s.is_empty());
         if !valid {
             out.fill(0.0);
             return;
@@ -301,8 +301,8 @@ impl Node for SparSeq2Node {
             let t = time[i] as f64;
             let seq = self.seq.as_ref().unwrap();
             let should_update = (self.prev_event.is_none() && self.next_event.is_none())
-                || self.prev_event.map(|p| t <= seq[p].0 + 1e-9).unwrap_or(false)
-                || self.next_event.map(|n| t >= seq[n].0 - 1e-9).unwrap_or(false);
+                || self.prev_event.is_some_and(|p| t <= seq[p].0 + 1e-9)
+                || self.next_event.is_some_and(|n| t >= seq[n].0 - 1e-9);
             if should_update {
                 self.update_event_boundaries(t);
             }

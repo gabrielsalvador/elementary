@@ -359,9 +359,9 @@ impl Node for McCaptureNode {
         let signals: Vec<&[f32]> = (1..n_in).map(|i| ctx.input(i)).collect();
         let mut write_start = 0usize;
         let mut write_stop = 0usize;
-        for i in 0..n {
-            let g = gate[i] != 0.0;
-            let dg = self.change.tick(gate[i]);
+        for (i, &level) in gate[..n].iter().enumerate() {
+            let g = level != 0.0;
+            let dg = self.change.tick(level);
             let falling = dg < -0.5;
             let rising = dg > 0.5;
             if falling {
