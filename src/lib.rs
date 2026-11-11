@@ -43,6 +43,13 @@ pub use resources::{SharedResource, SharedResourceMap, SharedResourcePtr};
 pub use runtime::Runtime;
 pub use value::Value;
 
+/// Whether a node of `type_name` would take `value` as its property `key`, by setting it on
+/// one made for the purpose: `None` when there is no such type of node.
+pub fn takes_property(type_name: &str, key: &str, value: &Value) -> Option<bool> {
+    let mut node = nodes::create_node(type_name, NodeInfo { sample_rate: 48_000.0, block_size: 64 })?;
+    Some(node.set_property(key, value, &mut SharedResourceMap::default()).is_ok())
+}
+
 //==============================================================================
 // Error types
 
